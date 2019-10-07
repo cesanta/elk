@@ -8,7 +8,6 @@ extern "C" void myWrite(int pin, int val) {
 }
 
 void setup() {
-  pinMode(13, OUTPUT); // Initialize the pin as an output
   struct js *vm = js_create(500);
   js_import(vm, myDelay, "vi");
   js_import(vm, myWrite, "vii");
