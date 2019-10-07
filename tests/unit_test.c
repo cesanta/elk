@@ -1,4 +1,4 @@
-#include "../elk.c"
+#include "../src/elk.h"
 
 #include <math.h>
 #include <stdio.h>
