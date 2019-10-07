@@ -1,4 +1,4 @@
-#include "elk.h"  // Sketch -> Add File -> elk.h and elk.c
+#include <elk.h> 
 
 extern "C" void myDelay(int milli) {
   delay(milli);
