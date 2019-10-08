@@ -11,7 +11,7 @@
 - Implements a subset of ES6 with limitations
 - Preallocates all necessary memory and never calls `malloc`
   at run time. Upon OOM, the VM is halted
-- Low footprint: RAM ~500 bytes + instance size, flash ~15 KB
+- Extremely low footprint: RAM ~500 bytes + instance size, flash ~15 KB
   - JS object takes 6 bytes, each property: 16 bytes,
   JS string: length + 4 bytes, any other type: 4 bytes
 - Strings are byte strings, not Unicode:
@@ -33,18 +33,23 @@ int sum(int a, int b) {
 }
 
 int main(void) {
-  struct js *vm = js_create(500); // Create JS instance that takes 500 bytes
-  js_import(vm, sum, "iii");      // Import C function "sum" into JS
-  js_eval(vm, "sum(1, 2);", -1);  // Call "sum"
-  js_destroy(vm);                 // Destroy VM instance
+  void *mem = malloc(500);
+  struct js *js = js_create(mem, 500);  // Create JS instance
+  js_ffi(js, sum, "iii");               // Import C function "sum" into JS
+  js_eval(js, "sum(1, 2);", -1);        // Call "sum"
   return 0;
 }
 ```
 
+NOTE: `js_ffi()` is a macro that executes JS code `ffi('signature@address')`.
+See API reference below for details.
+
 ## Call Javascript from C
 ```c
-js_val_t result = js_eval(vm, "YOUR JS CODE", -1);
-printf("result: %s\n", js_stringify(vm, result));
+char buf[100];
+jsval_t v = js_eval(js, "YOUR JS CODE", -1);              // Execute JS code
+printf("result: %s\n", js_fmt(js, v, buf, sizeof(buf)));  // Print result
+js_gc(js, v);                                             // Garbage collect
 ```
 
 ## Blinky in JavaScript on Arduino Uno
@@ -57,8 +62,8 @@ extern "C" void myWrite(int pin, int val) { digitalWrite(pin, val); }
 
 void setup() {
   struct js *vm = js_create(500);
-  js_import(vm, myDelay, "vi");
-  js_import(vm, myWrite, "vii");
+  js_ffi(vm, myDelay, "vi");
+  js_ffi(vm, myWrite, "vii");
   js_eval(vm,
           "while (1) { "
           "  myWrite(13, 0); "
@@ -146,7 +151,7 @@ Thus, functions with C types `float` or `bool` cannot be imported.
 The following macro is used to import C function into the JS instance:
 
 ```c
-js_import(struct js *js, void (*func)(void), const char *signature);
+js_ffi(struct js *js, void (*func)(void), const char *signature);
 ```
 
 - `js`: JS instance

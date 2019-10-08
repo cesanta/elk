@@ -8,17 +8,21 @@
 #include "elk.h"
 
 int main(int argc, char *argv[]) {
+  uint8_t mem[8192];
+  char buf[1024];
   int i, show_debug = 0;
-  struct js *js = js_create(2048);
-  jsval_t res = JS_UNDEFINED;
+  struct js *js = js_create(mem, sizeof(mem));
+  jsval_t res = 0;
+
+  js_ffi(js, atoi, "is");
 
   // js_import(js, js_stringify, "smj");
 
-  for (i = 1; i < argc && argv[i][0] == '-' && res != JS_ERROR; i++) {
+  for (i = 1; i < argc && argv[i][0] == '-'; i++) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
       const char *code = argv[++i];
       js_gc(js, res);
-      res = js_eval(js, code, -1);
+      res = js_eval(js, code, strlen(code));
     } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
       printf("Usage: %s [-e js_expression]\n", argv[0]);
       return EXIT_SUCCESS;
@@ -29,8 +33,7 @@ int main(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
   }
-  printf("%s%s", js_stringify(js, res), show_debug ? "  " : "\n");
-  if (show_debug) js_info(js, stdout);
-  js_destroy(js);
+  printf("%s%s", js_fmt(js, res, buf, sizeof(buf)), show_debug ? "  " : "\n");
+  /*if (show_debug) js_info(js, stdout);*/
   return EXIT_SUCCESS;
 }
