@@ -1,4 +1,4 @@
-#include "elk.h"  // Sketch -> Add File -> elk.h and elk.c
+#include <elk.h>  // Add Elk library
 
 extern "C" void myDelay(int milli) {
   delay(milli);
@@ -8,6 +8,7 @@ extern "C" void myWrite(int pin, int val) {
 }
 
 void setup() {
+  pinMode(13, OUTPUT);
   struct js *vm = js_create(500);
   js_import(vm, myDelay, "vi");
   js_import(vm, myWrite, "vii");

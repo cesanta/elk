@@ -55,12 +55,13 @@ js_gc(js, v);                                             // Garbage collect
 ## Blinky in JavaScript on Arduino Uno
 
 ```c
-#include "elk.h"  // Sketch -> Add File -> elk.h and elk.c
+#include <elk.h>  // Add Elk library
 
 extern "C" void myDelay(int milli) { delay(milli); }
 extern "C" void myWrite(int pin, int val) { digitalWrite(pin, val); }
 
 void setup() {
+  pinMode(13, OUTPUT);
   struct js *vm = js_create(500);
   js_ffi(vm, myDelay, "vi");
   js_ffi(vm, myWrite, "vii");
