@@ -11,8 +11,8 @@ void setup() {
   pinMode(13, OUTPUT);
   void *mem = malloc(500);
   struct js *js = js_create(mem, 500);
-  js_import(js, myDelay, "vi");
-  js_import(js, myWrite, "vii");
+  js_ffi(js, myDelay, "vi");
+  js_ffi(js, myWrite, "vii");
   js_eval(js,
           "while (1) { "
           "  myWrite(13, 0); "
