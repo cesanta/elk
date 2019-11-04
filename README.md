@@ -6,7 +6,6 @@
 
 ## Features
 
-- Clean ISO C, ISO C++. Builds on old (VC98) and modern compilers, from 8-bit (e.g. Arduino Uno) to 64-bit systems
 - No dependencies
 - Implements a subset of ES6 with limitations
 - Preallocates all necessary memory and never calls `malloc`

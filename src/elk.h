@@ -42,12 +42,12 @@ jsval_t js_eval(struct js *js, const char *s, int len);
 void js_gc(struct js *js, jsval_t v);
 const char *js_fmt(struct js *js, jsval_t v, char *buf, int len);
 
-#define js_ffi(js, fn, decl)                                                 \
-  do {                                                                       \
-    char buf[64];                                                            \
-    int n =                                                                  \
-        snprintf(buf, sizeof(buf), "let %s=ffi(0,'%s@%lx')", #fn, decl, fn); \
-    js_eval(js, buf, n);                                                     \
+#define js_ffi(js, fn, decl)                                                \
+  do {                                                                      \
+    char buf[64];                                                           \
+    int n = snprintf(buf, sizeof(buf), "let %s=ffi(0,'%s@%lx')", #fn, decl, \
+                     (unsigned long) (void *) fn);                          \
+    js_eval(js, buf, n);                                                    \
   } while (0)
 
 #if defined(__cplusplus)
