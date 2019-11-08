@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
   }
-  printf("%s%s", js_fmt(js, res, buf, sizeof(buf)), show_debug ? "  " : "\n");
-  /*if (show_debug) js_info(js, stdout);*/
+  printf("%s\n", js_fmt(js, res, buf, sizeof(buf)));
+  if (show_debug) js_debug(js, "DEBUG");
   return EXIT_SUCCESS;
 }
