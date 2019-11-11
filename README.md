@@ -34,14 +34,11 @@ int sum(int a, int b) {
 int main(void) {
   void *mem = malloc(500);
   struct js *js = js_create(mem, 500);  // Create JS instance
-  js_ffi(js, sum, "iii");               // Import C function "sum" into JS
+  js_import(js, "sum", sum, "iii");     // Import C function "sum" into JS
   js_eval(js, "sum(1, 2);", -1);        // Call "sum"
   return 0;
 }
 ```
-
-NOTE: `js_ffi()` is a macro that executes JS code `ffi('signature@address')`.
-See API reference below for details.
 
 ## Call Javascript from C
 ```c
@@ -63,14 +60,14 @@ void setup() {
   pinMode(13, OUTPUT);
 	void *mem = malloc(500);
   struct js *js = js_create(mem, 500);
-  js_ffi(js, myDelay, "vi");
-  js_ffi(js, myWrite, "vii");
+  js_import(js, "delay", (unsigned long) (void *) myDelay, "vi");
+  js_import(js, "digitalWrite", (unsigned long) (void *) myWrite, "vii");
   js_eval(js,
           "while (1) { "
-          "  myWrite(13, 0); "
-          "  myDelay(100); "
-          "  myWrite(13, 1); "
-          "  myDelay(100); "
+          "  digitalWrite(13, 0); "
+          "  delay(100); "
+          "  digitalWrite(13, 1); "
+          "  delay(100); "
           "}",
           -1);
 }
@@ -104,6 +101,18 @@ void loop() { delay(1000); }
 | Const, etc     | `const ...`, `await ...` , `void ...` , `new ...`, `instanceof ...` 	|
 | Standard types | No `Date`, `ReGexp`, `Function`, `String`, `Number`   	|
 | Prototypes     | No prototype based inheritance                        	|
+
+
+## Javascript API
+
+The following functions are imported by `js_create()`:
+
+| Signature | Description |
+| --------- | ----------- |
+| ffi(0, 'signature@address') | Import C function at runtime. For example, to import `aoi()` C function at runtime, do `ffi(0, 'is@0x12345')` where 0x12345 is the address of the `atoi` function. |
+| str(0, jsvalue) | Stringify JS value, just like `JSON.stringify()` |
+| eval(0, '1+2') | Evaluate JS code |
+| parse(0, '{"a":1}') | Parse string into JS value, just like `JSON.parse()` |
 
 
 ## C/C++ API
@@ -149,10 +158,10 @@ Elk can import C/C++ functions that satisfy the following conditions:
 
 Thus, functions with C types `float` or `bool` cannot be imported.
 
-The following macro is used to import C function into the JS instance:
+The following function is used to import C function into the JS instance:
 
 ```c
-js_ffi(struct js *js, void (*func)(void), const char *signature);
+js_import(struct js *js, const char *name, unsigned long addr, const char *signature);
 ```
 
 - `js`: JS instance

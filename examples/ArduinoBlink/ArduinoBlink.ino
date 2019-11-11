@@ -9,16 +9,16 @@ extern "C" void myWrite(int pin, int val) {
 
 void setup() {
   pinMode(13, OUTPUT);
-  void *mem = malloc(500);
+	void *mem = malloc(500);
   struct js *js = js_create(mem, 500);
-  js_ffi(js, myDelay, "vi");
-  js_ffi(js, myWrite, "vii");
+  js_import(js, "delay", (unsigned long) (void *) myDelay, "vi");
+  js_import(js, "digitalWrite", (unsigned long) (void *) myWrite, "vii");
   js_eval(js,
           "while (1) { "
-          "  myWrite(13, 0); "
-          "  myDelay(100); "
-          "  myWrite(13, 1); "
-          "  myDelay(100); "
+          "  digitalWrite(13, 0); "
+          "  delay(100); "
+          "  digitalWrite(13, 1); "
+          "  delay(100); "
           "}",
           -1);
 }

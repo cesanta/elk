@@ -41,15 +41,7 @@ struct js *js_create(void *mem, unsigned long mem_size);
 jsval_t js_eval(struct js *js, const char *s, int len);
 void js_gc(struct js *js, jsval_t v);
 const char *js_fmt(struct js *js, jsval_t v, char *buf, int len);
-extern void js_debug(struct js *, const char *);
-
-#define js_ffi(js, fn, decl)                                                \
-  do {                                                                      \
-    char buf[64];                                                           \
-    int n = snprintf(buf, sizeof(buf), "let %s=ffi(0,'%s@%lx')", #fn, decl, \
-                     (unsigned long) (void *) fn);                          \
-    js_eval(js, buf, n);                                                    \
-  } while (0)
+jsval_t *js_import(struct js *js, const char *name, unsigned long addr, const char *signature);
 
 #if defined(__cplusplus)
 }

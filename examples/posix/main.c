@@ -14,9 +14,7 @@ int main(int argc, char *argv[]) {
   struct js *js = js_create(mem, sizeof(mem));
   jsval_t res = 0;
 
-  js_ffi(js, atoi, "is");
-
-  // js_import(js, js_stringify, "smj");
+  js_import(js, "atoi", (unsigned long) (void *) atoi, "is");
 
   for (i = 1; i < argc && argv[i][0] == '-'; i++) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
@@ -33,7 +31,7 @@ int main(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
   }
-  printf("%s\n", js_fmt(js, res, buf, sizeof(buf)));
-  if (show_debug) js_debug(js, "DEBUG");
+  printf("%s%s", js_fmt(js, res, buf, sizeof(buf)), show_debug ? "  " : "\n");
+  /*if (show_debug) js_info(js, stdout);*/
   return EXIT_SUCCESS;
 }
