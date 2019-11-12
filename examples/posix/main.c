@@ -14,8 +14,6 @@ int main(int argc, char *argv[]) {
   struct js *js = js_create(mem, sizeof(mem));
   jsval_t res = 0;
 
-  js_import(js, "atoi", (unsigned long) (void *) atoi, "is");
-
   for (i = 1; i < argc && argv[i][0] == '-'; i++) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
       const char *code = argv[++i];
