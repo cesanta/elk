@@ -42,6 +42,7 @@ jsval_t js_eval(struct js *js, const char *s, int len);
 void js_gc(struct js *js, jsval_t v);
 const char *js_fmt(struct js *js, jsval_t v, char *buf, int len);
 jsval_t *js_import(struct js *js, const char *name, unsigned long addr, const char *signature);
+const char *js_info(struct js *js);
 
 #if defined(__cplusplus)
 }
