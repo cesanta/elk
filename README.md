@@ -35,7 +35,7 @@ int main(void) {
   void *mem = malloc(500);
   struct js *js = js_create(mem, 500);  // Create JS instance
   js_import(js, "sum", sum, "iii");     // Import C function "sum" into JS
-  js_eval(js, "sum(1, 2);", -1);        // Call "sum"
+  js_eval(js, "sum(1, 2);", 0);         // Call "sum"
   return 0;
 }
 ```
@@ -43,36 +43,33 @@ int main(void) {
 ## Call Javascript from C
 ```c
 char buf[100];
-jsval_t v = js_eval(js, "YOUR JS CODE", -1);              // Execute JS code
-printf("result: %s\n", js_fmt(js, v, buf, sizeof(buf)));  // Print result
+jsval_t v = js_eval(js, "1 + 2 * 3", 0);                  // Execute JS code
+printf("result: %s\n", js_fmt(js, v, buf, sizeof(buf)));  // result: 7
 js_gc(js, v);                                             // Garbage collect
 ```
 
 ## Blinky in JavaScript on Arduino Uno
 
 ```c
-#include <elk.h>  // Add Elk library
+#include "elk.h"  // Add Elk library
 
 extern "C" void myDelay(int milli) { delay(milli); }
 extern "C" void myWrite(int pin, int val) { digitalWrite(pin, val); }
+extern "C" void myMode(int pin, int mode) { pinMode(pin, mode); }
+
+struct js *js;
 
 void setup() {
-  pinMode(13, OUTPUT);
-	void *mem = malloc(500);
-  struct js *js = js_create(mem, 500);
-  js_import(js, "delay", (unsigned long) (void *) myDelay, "vi");
-  js_import(js, "digitalWrite", (unsigned long) (void *) myWrite, "vii");
-  js_eval(js,
-          "while (1) { "
-          "  digitalWrite(13, 0); "
-          "  delay(100); "
-          "  digitalWrite(13, 1); "
-          "  delay(100); "
-          "}",
-          -1);
+  js = js_create(malloc(700), 700);
+  js_import(js, "f1", (uintptr_t) myDelay, "vi");
+  js_import(js, "f2", (uintptr_t) myWrite, "vii");
+  js_import(js, "f3", (uintptr_t) myMode, "vii");
+	js_eval(js, "f3(13, 1);", 0);  // Set LED pin to OUTPUT mode
 }
 
-void loop() { delay(1000); }
+void loop() {
+  js_eval(js, "f1(200); f2(13, 1); f1(200); f2(13, 0);", 0);
+}
 ```
 
 ## Supported standard operations and constructs
@@ -109,39 +106,23 @@ The following functions are imported by `js_create()`:
 
 | Signature | Description |
 | --------- | ----------- |
-| ffi(0, 'signature@address') | Import C function at runtime. For example, to import `aoi()` C function at runtime, do `ffi(0, 'is@0x12345')` where 0x12345 is the address of the `atoi` function. |
-| str(0, jsvalue) | Stringify JS value, just like `JSON.stringify()` |
-| eval(0, '1+2') | Evaluate JS code |
-| parse(0, '{"a":1}') | Parse string into JS value, just like `JSON.parse()` |
+| `ffi(0, 'signature@address')` | Import C function at runtime. For example, to import `aoi()` C function at runtime, do `ffi(0, 'is@0x12345')` where 0x12345 is the address of the `atoi` function. |
+| `str(0, val)` | Stringify JS value, just like `JSON.stringify()` |
+| `parse(0, '{"a":1}')` | Parse string into JS value, just like `JSON.parse()` |
 
 
 ## C/C++ API
 
-<dl>
-  <dt><tt>struct js *js_create(unsigned long size);</tt></dt>
-  <dd>Create Javascript instance, preallocate <tt>size</tt> bytes</dd>
-  <dt><tt>void js_destroy(struct js *);</tt></dt>
-  <dd>Destroy Javascript instance</dd>
-  <dt><tt>jsval_t js_eval(struct js *, const char *buf, int len);</tt></dt>
-  <dd>Evaluate JS code. If `len == -1`, then `strlen(buf)` is called to get the tt length</dd>
-  <dt><tt>const char *js_stringify(struct js *, jsval_t v);</tt></dt>
-  <dd>Stringify JS value, works like JSON.stringify()</dd>
-  <dt><tt>jsval_t js_get_global(struct js *);</tt></dt>
-  <dd>Get global namespace object</dd>
-  <dt><tt>jsval_t js_set(struct js *, jsval_t obj, jsval_t k, jsval_t v);</tt></dt>
-  <dd>Set attribute k to value v in object obj. k must be a string</dd>
-  <dt><tt>jsval_t js_mk_obj(struct js *);</tt></dt>
-  <dd>Create object</dd>
-  <dt><tt>jsval_t js_mk_str(struct js *, const char *, int len);</tt></dt>
-  <dd>Create string</dd>
-  <dt><tt>jsval_t js_mk_num(float value);</tt></dt>
-  <dd>Create number</dd>
-  <dt><tt>float js_to_float(jsval_t v);</tt></dt>
-  <dd>Extract number from a JS value</dd>
-  <dt><tt>char *js_to_str(struct js *, jsval_t, jslen_t *);</tt></dt>
-  <dd>Extract string from a JS value</dd>
-</dl>
+See [elk.h](elk.h):
 
+| Signature | Description |
+| --------- | ----------- |
+| `struct js *js_create(void *mem, int size)` | Initialize JS engine in a provided memory chunk. Elk will use only that memory for operation. |
+| `jsval_t js_eval(struct js *, const char *buf, int len)` | Evaluate JS code, return JS value. If `len` is 0, then `strlen(code)` is used. |
+| `char *js_fmt(struct js *, jsval_t v, char *buf, int len)` | Stringify JS value into the provided buffer, return pointer to `buf`. |
+| `void js_gc(struct js *, jsval_t v)` | Deallocate JS value obtained by `js_eval()` call. |
+| `const char *js_info(struct js *)` | Return JSON string with the Elk engine internal stats. |
+ 
 
 ## Importing C functions
 

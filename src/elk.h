@@ -26,7 +26,7 @@ extern "C" {
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned uint32_t;
-typedef long intptr_t;
+typedef unsigned long uintptr_t;
 #define snprintf _snprintf
 #define strtod(p, e) \
   (((p)[0] == '0' && (p)[1] == 'x') ? strtoul(p + 2, e, 16) : strtod(p, e))
@@ -37,11 +37,11 @@ typedef long intptr_t;
 struct js;
 typedef uint32_t jsval_t;
 
-struct js *js_create(void *mem, unsigned long mem_size);
+struct js *js_create(void *mem, int mem_size);
 jsval_t js_eval(struct js *js, const char *s, int len);
 void js_gc(struct js *js, jsval_t v);
 const char *js_fmt(struct js *js, jsval_t v, char *buf, int len);
-jsval_t *js_import(struct js *js, const char *name, unsigned long addr, const char *signature);
+jsval_t *js_import(struct js *js, const char *name, uintptr_t addr, const char *signature);
 const char *js_info(struct js *js);
 
 #if defined(__cplusplus)
