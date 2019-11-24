@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
   }
-  printf("%s%s", js_fmt(js, res, buf, sizeof(buf)), show_debug ? "  " : "\n");
-  /*if (show_debug) js_info(js, stdout);*/
+  printf("%s%s%s\n", js_fmt(js, res, buf, sizeof(buf)), show_debug ? "  " : "",
+         show_debug ? js_info(js) : "");
   return EXIT_SUCCESS;
 }

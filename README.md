@@ -1,24 +1,20 @@
-# Elk: a restricted single-file JS engine for embedded systems
+# Elk: a tiny JS engine for embedded systems
 
-[![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
-[![Build Status](https://travis-ci.org/cpq/elk.svg?branch=master)](https://travis-ci.org/cpq/elk)
-[![Code Coverage](https://codecov.io/gh/cpq/elk/branch/master/graph/badge.svg)](https://codecov.io/gh/cpq/elk)
+Elk is a tiny embeddable JavaScript engine that implements a small, but usable
+subset of ES6.
 
-## Features
+## Features and limitations
 
-- No dependencies
-- Implements a subset of ES6 with limitations
-- Preallocates all necessary memory and never calls `malloc`
-  at run time. Upon OOM, the VM is halted
-- Extremely low footprint: RAM ~500 bytes + instance size, flash ~15 KB
-  - JS object takes 6 bytes, each property: 16 bytes,
-  JS string: length + 4 bytes, any other type: 4 bytes
-- Strings are byte strings, not Unicode:
-  `'ы'.length === 2`, `'ы'[0] === '\xd1'`, `'ы'[1] === '\x8b'`
-- Simple API to import existing C functions into JS
-- JS VM executes JS source directly, no AST/bytecode is generated
-- Limitations: max string length is 64KB, numbers hold
-  32-bit `float` value or 23-bit integer value, no standard JS library
+- Zero dependencies, around 1.5K LOC.
+- Does not use dynamic memory allocation.
+- C89, can be compiled by C++ compilers, too.
+- Very low native stack memory usage.
+- Very small public API.
+- Allows to call native functions via FFI.
+- Limitations:
+	 - Max string length is 64KB
+	 - Numbers hold 32-bit `float` value or 23-bit integer value
+	 - No standard JS library
 
 ## Call C from Javascript
 
@@ -190,8 +186,8 @@ int f(int (*callback)(int a, int b, void *userdata), void *userdata) {
 int main(void) {
   struct js *vm = js_create(500);
   js_import(vm, f, "i[iiiu]u");
-  jsval_t v = js_eval(vm, "f(function(a,b,c){return a + b;}, 0);", -1);
-  printf("RESULT: %g\n", js_to_float(v));  // Should print "3"
+  jsval_t v = js_eval(vm, "f(function(a,b,c){return a + b;}, 0);", 0);
+	printf("result: %s\n", js_fmt(js, v, buf, sizeof(buf)));  // result: 3
   js_destroy(vm);
   return 0;
 }
@@ -200,7 +196,7 @@ int main(void) {
 ## Build stand-alone binary
 
 ```
-$ make elk
+$ cc -o elk examples/posix/main.c -I. -Lsrc/linux-x64 -ldl -lelk
 $ ./elk -e 'let o = {a: 1}; o.a += 1; o;'
 {"a":2}
 ```
