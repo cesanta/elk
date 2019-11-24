@@ -1,18 +1,16 @@
 # Elk: a tiny JS engine for embedded systems
 
 Elk is a tiny embeddable JavaScript engine that implements a small, but usable
-subset of ES6.
+subset of ES6. Features include:
 
-## Features and limitations
-
-- Zero dependencies, around 1.5K LOC.
-- Does not use dynamic memory allocation.
-- C89, can be compiled by C++ compilers, too.
-- Very low native stack memory usage.
-- Very small public API.
-- Allows to call native functions via FFI.
+- Zero dependencies
+- Does not use dynamic memory allocation
+- Tiny: less than 15KB on flash, less than 200 bytes RAM for core VM
+- Very low native stack memory usage
+- Very small public API
+- Allows to call native functions via FFI
 - Limitations:
-	 - Max string length is 64KB
+	 - Max string length is 8KB
 	 - Numbers hold 32-bit `float` value or 23-bit integer value
 	 - No standard JS library
 
@@ -98,13 +96,15 @@ void loop() {
 
 ## Javascript API
 
-The following functions are imported by `js_create()`:
+The following functions are imported by `js_create()`. Note that these
+functions take mandatory first argument, `0`.
 
 | Signature | Description |
 | --------- | ----------- |
 | `ffi(0, 'signature@address')` | Import C function at runtime. For example, to import `aoi()` C function at runtime, do `ffi(0, 'is@0x12345')` where 0x12345 is the address of the `atoi` function. |
 | `str(0, val)` | Stringify JS value, just like `JSON.stringify()` |
 | `parse(0, '{"a":1}')` | Parse string into JS value, just like `JSON.parse()` |
+| `jsstat(0)` | Return JSON string with the JS VM statistics |
 
 
 ## C/C++ API
@@ -113,7 +113,7 @@ See [elk.h](elk.h):
 
 | Signature | Description |
 | --------- | ----------- |
-| `struct js *js_create(void *mem, int size)` | Initialize JS engine in a provided memory chunk. Elk will use only that memory for operation. |
+| `struct js *js_create(void *mem, int size)` | Initialize JS engine in a given memory chunk. |
 | `jsval_t js_eval(struct js *, const char *buf, int len)` | Evaluate JS code, return JS value. If `len` is 0, then `strlen(code)` is used. |
 | `char *js_fmt(struct js *, jsval_t v, char *buf, int len)` | Stringify JS value into the provided buffer, return pointer to `buf`. |
 | `void js_gc(struct js *, jsval_t v)` | Deallocate JS value obtained by `js_eval()` call. |
