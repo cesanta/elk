@@ -23,13 +23,8 @@ extern "C" {
 #endif
 
 #if defined(_MSC_VER) && _MSC_VER < 1700
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
 typedef unsigned uint32_t;
 typedef unsigned long uintptr_t;
-#define snprintf _snprintf
-#define strtod(p, e) \
-  (((p)[0] == '0' && (p)[1] == 'x') ? strtoul(p + 2, e, 16) : strtod(p, e))
 #else
 #include <stdint.h>
 #endif
