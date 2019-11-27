@@ -26,8 +26,8 @@ int sum(int a, int b) {
 }
 
 int main(void) {
-  void *mem = malloc(500);
-  struct js *js = js_create(mem, 500);  // Create JS instance
+  char mem[500];	// Preallocated JS memory buffer
+  struct js *js = js_create(mem, sizeof(mem));  // Create JS instance
   js_import(js, "sum", sum, "iii");     // Import C function "sum" into JS
   js_eval(js, "sum(1, 2);", 0);         // Call "sum"
   return 0;
