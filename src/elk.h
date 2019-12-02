@@ -33,11 +33,14 @@ struct js;
 typedef uint32_t jsval_t;
 
 struct js *js_create(void *mem, int mem_size);
-jsval_t js_eval(struct js *js, const char *s, int len);
-void js_gc(struct js *js, jsval_t v);
-const char *js_fmt(struct js *js, jsval_t v, char *buf, int len);
-jsval_t *js_import(struct js *js, const char *name, uintptr_t addr, const char *signature);
-const char *js_info(struct js *js);
+jsval_t js_eval(struct js *, const char *s, int len);
+void js_gc(struct js *, jsval_t v);
+// const char *js_fmt(struct js *, jsval_t v, char *buf, int len);
+const char *js_str(struct js *, jsval_t value);
+jsval_t *js_import(struct js *, const char *name, uintptr_t f, const char *sig);
+const char *js_info(struct js *);
+jsval_t js_parse(struct js *, const char *s);
+jsval_t js_ffi(struct js *, const char *decl);
 
 #if defined(__cplusplus)
 }

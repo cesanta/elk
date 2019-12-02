@@ -44,27 +44,10 @@ js_gc(js, v);                                             // Garbage collect
 
 ## Blinky in JavaScript on Arduino Uno
 
-```c
-#include "elk.h"  // Add Elk library
+This example works on 8-bit Arduino with 2k of RAM, blinking an LED
+and printing JS memory usage statistics to the serial console:
 
-extern "C" void myDelay(int milli) { delay(milli); }
-extern "C" void myWrite(int pin, int val) { digitalWrite(pin, val); }
-extern "C" void myMode(int pin, int mode) { pinMode(pin, mode); }
-
-struct js *js;
-
-void setup() {
-  js = js_create(malloc(700), 700);
-  js_import(js, "f1", (uintptr_t) myDelay, "vi");
-  js_import(js, "f2", (uintptr_t) myWrite, "vii");
-  js_import(js, "f3", (uintptr_t) myMode, "vii");
-	js_eval(js, "f3(13, 1);", 0);  // Set LED pin to OUTPUT mode
-}
-
-void loop() {
-  js_eval(js, "f1(200); f2(13, 1); f1(200); f2(13, 0);", 0);
-}
-```
+See [ArduinoBlink.ino](examples/ArduinoBlink/ArduinoBlink.ino)
 
 ## Supported standard operations and constructs
 

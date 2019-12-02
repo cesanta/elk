@@ -8,11 +8,13 @@
 #include "elk.h"
 
 int main(int argc, char *argv[]) {
-  uint8_t mem[8192];
-  char buf[1024];
+  char mem[8192];
   int i, show_debug = 0;
   struct js *js = js_create(mem, sizeof(mem));
   jsval_t res = 0;
+  js_import(js, "ffi", (uintptr_t) js_ffi, "jms");
+  js_import(js, "strlen", (uintptr_t) strlen, "is");
+  js_import(js, "atoi", (uintptr_t) atoi, "is");
 
   for (i = 1; i < argc && argv[i][0] == '-'; i++) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
@@ -29,7 +31,7 @@ int main(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
   }
-  printf("%s%s%s\n", js_fmt(js, res, buf, sizeof(buf)), show_debug ? "  " : "",
+  printf("%s%s%s\n", js_str(js, res), show_debug ? "  " : "",
          show_debug ? js_info(js) : "");
   return EXIT_SUCCESS;
 }
