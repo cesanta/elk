@@ -28,7 +28,7 @@ int sum(int a, int b) {
 int main(void) {
   char mem[500];	// Preallocated JS memory buffer
   struct js *js = js_create(mem, sizeof(mem));  // Create JS instance
-  js_import(js, "sum", sum, "iii");     // Import C function "sum" into JS
+  js_import(js, "sum", sum, "iii");    	// Import C function "sum" into JS
   js_eval(js, "sum(1, 2);", 0);         // Call "sum"
   return 0;
 }
@@ -36,10 +36,9 @@ int main(void) {
 
 ## Call Javascript from C
 ```c
-char buf[100];
-jsval_t v = js_eval(js, "1 + 2 * 3", 0);                  // Execute JS code
-printf("result: %s\n", js_fmt(js, v, buf, sizeof(buf)));  // result: 7
-js_gc(js, v);                                             // Garbage collect
+jsval_t v = js_eval(js, "1 + 2 * 3", 0); 	// Execute JS code
+printf("result: %s\n", js_str(js, v));  	// result: 7
+js_gc(js, v);                             // Garbage collect
 ```
 
 ## Blinky in JavaScript on Arduino Uno
@@ -156,11 +155,11 @@ int f(int (*callback)(int a, int b, void *userdata), void *userdata) {
 }
 
 int main(void) {
-  struct js *vm = js_create(500);
+  char mem[500];
+  struct js *vm = js_create(mem, sizeof(mem));
   js_import(vm, f, "i[iiiu]u");
   jsval_t v = js_eval(vm, "f(function(a,b,c){return a + b;}, 0);", 0);
-	printf("result: %s\n", js_fmt(js, v, buf, sizeof(buf)));  // result: 3
-  js_destroy(vm);
+	printf("result: %s\n", js_str(js, v));  // result: 3
   return 0;
 }
 ```
