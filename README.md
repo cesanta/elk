@@ -77,19 +77,6 @@ See [ArduinoBlink.ino](examples/ArduinoBlink/ArduinoBlink.ino)
 | Prototypes     | No prototype based inheritance                        	|
 
 
-## Javascript API
-
-The following functions are imported by `js_create()`. Note that these
-functions take mandatory first argument, `0`.
-
-| Signature | Description |
-| --------- | ----------- |
-| `ffi(0, 'signature@address')` | Import C function at runtime. For example, to import `aoi()` C function at runtime, do `ffi(0, 'is@0x12345')` where 0x12345 is the address of the `atoi` function. |
-| `str(0, val)` | Stringify JS value, just like `JSON.stringify()` |
-| `parse(0, '{"a":1}')` | Parse string into JS value, just like `JSON.parse()` |
-| `jsstat(0)` | Return JSON string with the JS VM statistics |
-
-
 ## C/C++ API
 
 See [elk.h](elk.h):
@@ -98,9 +85,11 @@ See [elk.h](elk.h):
 | --------- | ----------- |
 | `struct js *js_create(void *mem, int size)` | Initialize JS engine in a given memory chunk. |
 | `jsval_t js_eval(struct js *, const char *buf, int len)` | Evaluate JS code, return JS value. If `len` is 0, then `strlen(code)` is used. |
-| `char *js_fmt(struct js *, jsval_t v, char *buf, int len)` | Stringify JS value into the provided buffer, return pointer to `buf`. |
 | `void js_gc(struct js *, jsval_t v)` | Deallocate JS value obtained by `js_eval()` call. |
 | `const char *js_info(struct js *)` | Return JSON string with the Elk engine internal stats. |
+| `jsval_t *js_import(struct js *, const char *name, uintptr_t fn, const char *sig)` | Import C function into the JS environment |
+| `char *js_str(struct js *, jsval_t v)` | Stringifies JS value, like `JSON.stringify` |
+| `jsval_t js_parse(struct js *, const char *str)` | Parses a string into a JS value, like `JSON.parse()` |
  
 
 ## Importing C functions
