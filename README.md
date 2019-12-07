@@ -8,7 +8,7 @@ subset of ES6. Features include:
 - Tiny: less than 15KB on flash, less than 200 bytes RAM for core VM
 - Very low native stack memory usage
 - Very small public API
-- Allows to call native functions via FFI
+- Allows to call C/C++ functions from Javascript and vice versa
 - Limitations:
 	 - Max string length is 8KB
 	 - Numbers hold 32-bit `float` value or 23-bit integer value
@@ -156,9 +156,9 @@ int f(int (*callback)(int a, int b, void *userdata), void *userdata) {
 
 int main(void) {
   char mem[500];
-  struct js *vm = js_create(mem, sizeof(mem));
-  js_import(vm, f, "i[iiiu]u");
-  jsval_t v = js_eval(vm, "f(function(a,b,c){return a + b;}, 0);", 0);
+  struct js *js = js_create(mem, sizeof(mem));
+  js_import(js, f, "i[iiiu]u");
+  jsval_t v = js_eval(js, "f(function(a,b,c){return a + b;}, 0);", 0);
 	printf("result: %s\n", js_str(js, v));  // result: 3
   return 0;
 }
@@ -167,7 +167,7 @@ int main(void) {
 ## Build stand-alone binary
 
 ```
-$ cc -o elk examples/posix/main.c -I. -Lsrc/linux-x64 -ldl -lelk
+$ cc -o elk examples/posix/main.c -I src -L src/linux-x64 -ldl -lelk
 $ ./elk -e 'let o = {a: 1}; o.a += 1; o;'
 {"a":2}
 ```
