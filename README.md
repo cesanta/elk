@@ -88,7 +88,7 @@ See [elk.h](elk.h):
 | `const char *js_info(struct js *)` | Return JSON string with the Elk engine internal stats. |
 | `jsval_t *js_import(struct js *, const char *name, uintptr_t fn, const char *sig)` | Import C function into the JS environment |
 | `char *js_str(struct js *, jsval_t v)` | Stringifies JS value, like `JSON.stringify` |
-| `jsval_t js_parse(struct js *, const char *str)` | Parses a string into a JS value, like `JSON.parse()` |
+| `jsval_t js_parse(struct js *, const char *str, int len)` | Parses a string into a JS value, like `JSON.parse()` |
  
 
 ## Importing C functions

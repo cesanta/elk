@@ -39,7 +39,7 @@ void js_gc(struct js *, jsval_t v);
 const char *js_str(struct js *, jsval_t value);
 jsval_t *js_import(struct js *, const char *name, uintptr_t f, const char *sig);
 const char *js_info(struct js *);
-jsval_t js_parse(struct js *, const char *s);
+jsval_t js_parse(struct js *, const char *s, int len);
 jsval_t js_ffi(struct js *, const char *decl);
 
 #if defined(__cplusplus)
