@@ -170,6 +170,8 @@ int main(void) {
 $ cc -o elk examples/posix/main.c -I src -L src/linux-x64 -ldl -lelk
 $ ./elk -e 'let o = {a: 1}; o.a += 1; o;'
 {"a":2}
+$ ./elk -e 'let f = function(a,b) { return a * b }; f(2, strlen("abc"))'
+6
 ```
 
 ## LICENSE
