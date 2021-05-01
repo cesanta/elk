@@ -1,0 +1,29 @@
+name: build
+on: [push, pull_request]
+jobs:
+  Linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: make
+      run: make -C test test test++ cli EXTRA="-lm"
+  MacOS:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: make
+      run: make -C test test++ cli upload-coverage
+  Windows:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: vc2017
+      run: make -C test vc2017
+    - name: mingw
+      run: make -C test mingw
+  ArduinoUno:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: uno
+      run: make -C test uno
