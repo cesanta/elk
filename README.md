@@ -182,7 +182,7 @@ Here are some example of the import specifications:
 - `double sub(double a, double b)` -> `js_import(js, sub, "ddd")`
 - `int rand(void)` -> `js_import(js, rand, "i")`
 - `unsigned long strlen(char *s)` -> `js_import(js, strlen, "is")`
-- `char *js_stringify(struct js *, js_val_t)` -> `js_import(js, js_stringify, "smj")`
+- `char *js_str(struct js *, js_val_t)` -> `js_import(js, js_str, "smj")`
 
 In some cases, C APIs use callback functions. For example, a timer C API could
 specify a time interval, a C function to call, and function parameter. It is
@@ -214,21 +214,6 @@ int main(void) {
   printf("result: %s\n", js_str(js, v));  // result: 3
   return 0;
 }
-```
-
-## Blinky in JavaScript on Arduino Uno
-
-This example works on 8-bit Arduino with 2k of RAM, blinking an LED
-and printing JS memory usage statistics to the serial console:
-[ArduinoBlink.ino](examples/ArduinoBlink/ArduinoBlink.ino)
-
-
-## Build stand-alone binary
-
-```
-$ cc elk.c examples/posix/main.c -o elk
-$ ./elk -e 'let o = {a: 1}; o.a += 1; o;'
-{"a":2}
 ```
 
 ## LICENSE
