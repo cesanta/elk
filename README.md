@@ -155,11 +155,11 @@ enough space there, an empty string is returned.
 ### js\_import()
 
 ```c
-js_import(struct js *js, const char *name, unsigned long func, const char *signature);
+jsval_t js_import(struct js *js, uintptr_t funcaddr, const char *signature);
 ```
 
-Import an existing C function with address `func` and signature `signature`
-into Elk under the JS name `name`:
+Import an existing C function with address `funcaddr` and signature `signature`.
+Return imported function, suitable for subsequent `js_set()`.
 
 - `js`: JS instance
 - `func`: C function address: `(unsigned long) &my_function`
