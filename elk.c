@@ -379,7 +379,6 @@ static jsoff_t js_unmark_entity(struct js *js, jsoff_t off) {
 }
 
 static void js_unmark_used_entities(struct js *js) {
-  // TODO(cpq): process topmost scope only
   for (jsval_t scope = js->scope;;) {
     js_unmark_entity(js, vdata(scope));
     jsoff_t off = loadoff(js, vdata(scope)) & ~3;
@@ -520,7 +519,9 @@ static void sortops(uint8_t *ops, int nops, jsval_t *stk) {
 
 static jsval_t js_block(struct js *js, bool create_scope) {
   jsval_t res = mkval(T_UNDEF, 0);
+  jsoff_t brk1 = js->brk;
   if (create_scope) js->scope = mkobj(js, vdata(js->scope));  // Enter new scope
+  jsoff_t brk2 = js->brk;
   while (js->tok != TOK_EOF && js->tok != TOK_RBRACE) {
     js->pos = skipws(js->code, js->clen, js->pos);
     if (js->pos < js->clen && js->code[js->pos] == '}') break;
@@ -528,6 +529,7 @@ static jsval_t js_block(struct js *js, bool create_scope) {
   }
   if (js->pos < js->clen && js->code[js->pos] == '}') js->pos++;
   if (create_scope) js->scope = upper(js, js->scope);  // Exit scope
+  if (js->brk == brk2) js->brk = brk1;                 // Fast scope GC
   return res;
 }
 
@@ -781,11 +783,9 @@ static jsval_t call_js(struct js *js, const char *fn, int fnlen) {
   if (fnpos < fnlen && fn[fnpos] == '{') fnpos++;  // And skip the brace
   jsoff_t n = fnlen - fnpos - 1;  // Function code with stripped braces
   // printf("  %d. calling, %u [%.*s]\n", js->flags, n, (int) n, &fn[fnpos]);
-  uint8_t flags = js->flags;  // Save flags
   js->flags = F_CALL;         // Mark we're in the function call
   jsval_t res = js_eval_nogc(js, &fn[fnpos], n);         // Call function, no GC
   if (!(js->flags & F_RETURN)) res = mkval(T_UNDEF, 0);  // Is return called?
-  js->flags = flags;                                     // Restore flags
   js->scope = upper(js, js->scope);                      // Delete call scope
   return res;
 }
@@ -801,9 +801,11 @@ static jsval_t do_call_op(struct js *js, jsval_t func, jsval_t args) {
   js->clen = codereflen(args);              // Set args length
   js->pos = skipws(js->code, js->clen, 0);  // Skip to 1st arg
   // printf("CALL [%.*s] -> %.*s\n", (int) js->clen, js->code, (int) fnlen, fn);
+  uint8_t tok = js->tok, flags = js->flags;  // Save flags
   jsval_t res = fn[0] != '(' ? call_c(js, fn, fnlen) : call_js(js, fn, fnlen);
   // printf("  -> %s\n", js_str(js, res));
   js->code = code, js->clen = clen, js->pos = pos;  // Restore parser
+  js->flags = flags, js->tok = tok;
   return res;
 }
 
@@ -1171,3 +1173,29 @@ jsval_t js_eval(struct js *js, const char *buf, size_t len) {
   if (len == (size_t) ~0) len = strlen(buf);
   return js_eval_nogc(js, buf, (jsoff_t) len);
 }
+
+#ifdef JS_DUMP
+void js_dump(struct js *js) {
+  jsoff_t off = 0, v;
+  printf("JS size %u, brk %u\n", js->size, js->brk);
+  while (off < js->brk) {
+    memcpy(&v, &js->mem[off], sizeof(v));
+    printf(" %5u: ", off);
+    if ((v & 3) == T_OBJ) {
+      printf("OBJ %u %u\n", v & ~3, loadoff(js, off + sizeof(off)));
+    } else if ((v & 3) == T_PROP) {
+      jsoff_t koff = loadoff(js, off + sizeof(v));
+      jsval_t val = loadval(js, off + sizeof(v) + sizeof(v));
+      printf("PROP next %u, koff %u vtype %d vdata %lu\n", v & ~3, koff,
+             vtype(val), vdata(val));
+    } else if ((v & 3) == T_STR) {
+      jsoff_t len = v >> 2;
+      printf("STR %u [%.*s]\n", len, (int) len, js->mem + off + sizeof(v));
+    } else {
+      printf("???\n");
+      break;
+    }
+    off += esize(v);
+  }
+}
+#endif

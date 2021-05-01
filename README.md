@@ -67,7 +67,7 @@ int main(void) {
 - No `var`, no `const`. Use `let`. Strict mode only
 - No `do`, `switch`, `for`. Use `while`
 - No `else`, only `if`. No ternary operator `a ? b : c`
-- No arrays, closures, prototypes, `this`, `new`, `instanceof`
+- No arrays, closures, prototypes, `this`, `new`, `delete`, `instanceof`
 - No standard library: no `Date`, `Regexp`, `Function`, `String`, `Number`
 - Strings are binary data chunks, not Unicode strings
 
@@ -86,10 +86,20 @@ while (a < 100)   // 16 milliseconds on a 48Mhz SAMD21
 
 ## Build options
 
-| Name         | Default | Description |
-| ------------ | ------- | ----------- |
-|`JS_EXPR_MAX` | 20      | Maximum tokens in expression. Reduce to save C stack space |
+| Name         | Default   | Description |
+| ------------ | --------- | ----------- |
+|`JS_EXPR_MAX` | 20        | Maximum tokens in expression. Reduce to save C stack space |
+|`JS_DUMP`     | undefined | Define to enable `js_dump(struct js *)` function which prints JS memory internals to stdout |
 
+Note: on ESP32 or ESP8266, compiled functions go into the `.text` ELF
+section and subsequently in the IRAM MCU memory. It is possible to save
+IRAM space by copying Elk's functions into the irom section before linking.
+First, compile the object file, then rename `.text` section, e.g. for ESP8266:
+
+```sh
+$ xtensa-lx106-elf-gcc ... elk.c -c tmp
+$ xtensa-lx106-elf-objcopy --rename-section .text=.irom0.text tmp elk.a
+```
 
 ## API reference
 

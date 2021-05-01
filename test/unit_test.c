@@ -1,3 +1,4 @@
+#define JS_DUMP
 #include "../elk.c"
 
 #include <assert.h>
@@ -5,30 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-void js_dump(struct js *js) {
-  jsoff_t off = 0, v;
-  printf("JS size %u, brk %u\n", js->size, js->brk);
-  while (off < js->brk) {
-    memcpy(&v, &js->mem[off], sizeof(v));
-    printf(" %5u: ", off);
-    if ((v & 3) == T_OBJ) {
-      printf("OBJ %u %u\n", v & ~3, loadoff(js, off + sizeof(off)));
-    } else if ((v & 3) == T_PROP) {
-      jsoff_t koff = loadoff(js, off + sizeof(v));
-      jsval_t val = loadval(js, off + sizeof(v) + sizeof(v));
-      printf("PROP next %u, koff %u vtype %d vdata %lu\n", v & ~3, koff,
-             vtype(val), vdata(val));
-    } else if ((v & 3) == T_STR) {
-      jsoff_t len = v >> 2;
-      printf("STR %u [%.*s]\n", len, (int) len, js->mem + off + sizeof(v));
-    } else {
-      printf("???\n");
-      break;
-    }
-    off += esize(v);
-  }
-}
 
 static bool ev(struct js *js, const char *expr, const char *expectation) {
   const char *result = js_str(js, js_eval(js, expr, strlen(expr)));
@@ -256,6 +233,7 @@ static void test_flow(void) {
   assert(ev(js, "b = 0; while (true) if (b++ > 10) break; b;", "12"));
   assert(ev(js, "a = b = 0; while (b++ < 10) while (a < b) a++; a", "10"));
   assert(ev(js, "a = 0; while (1) { if (a++ < 10) continue; break;} a", "11"));
+  assert(ev(js, "a=b=0; while (b++<10) {true;a++;} a", "10"));
 }
 
 static void test_scopes(void) {
@@ -327,6 +305,7 @@ static void test_funcs(void) {
   assert(ev(js, "f(1+2,f(2,3))", "8"));
   js_gc(js);
   assert(js->brk == brk);
+  assert(ev(js, "let a=0; (function(){a++;})(); a", "1"));
 }
 
 static void test_bool(void) {
@@ -398,6 +377,9 @@ static void test_ffi(void) {
   assert(ev(js, "os.op(function(x){return x;}, 12, 5, null)", "17"));
   assert(ev(js, "os.op(function(x){return x*x;}, 2, 3, null)", "25"));
   assert(ev(js, "let a = 3, b = 4; os.sum1(a, b)", "7"));
+  assert(ev(js, "let f = function(){return 1;}; 7;", "7"));
+  assert(ev(js, "a=b=0; while(a++<1){os.sum1(1,2);b++;};b", "1"));
+  assert(ev(js, "a=b=0; while(a++<1){f();f();b++;};b", "1"));
 }
 
 int main(void) {
