@@ -699,7 +699,7 @@ static jsval_t call_c(struct js *js, const char *fn, int fnlen) {
       for (i = 1; i < fnlen && fn[i] != '@' && n < MAX_FFI_ARGS; i++) {
         js->pos = skipws(js->code, js->clen, js->pos);
         if (js->pos >= js->clen) return js_err(js, "bad arg %d", n + 1);
-        jsval_t v = js_expr(js, TOK_COMMA, TOK_RPAREN);
+        jsval_t v = resolveprop(js, js_expr(js, TOK_COMMA, TOK_RPAREN));
         // printf("  arg %d[%c] -> %s\n", n, fn[i], js_str(js, v));
         if (fn[i] == 'd') type |= 1 << (n + 1);
         // clang-format off

@@ -397,6 +397,7 @@ static void test_ffi(void) {
   assert(ev(js, "os.atoi('752')", "752"));
   assert(ev(js, "os.op(function(x){return x;}, 12, 5, null)", "17"));
   assert(ev(js, "os.op(function(x){return x*x;}, 2, 3, null)", "25"));
+  assert(ev(js, "let a = 3, b = 4; os.sum1(a, b)", "7"));
 }
 
 int main(void) {
