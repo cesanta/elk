@@ -149,7 +149,8 @@ const char *js_str(struct js *, jsval_t val);
 
 Stringify JS value `val` and return a pointer to a 0-terminated result.
 The string is allocated in the "free" memory section. If there is no
-enough space there, an empty string is returned.
+enough space there, an empty string is returned. The returned pointer
+is valid until the next `js_eval()` call.
 
 
 ### js\_import()
