@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 25.2.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 512 512" style="enable-background:new 0 0 512 512;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:#FBB03B;stroke:#010101;stroke-width:12.2847;stroke-miterlimit:10;}
+	.st1{fill:#A77D52;stroke:#010101;stroke-width:12.714;stroke-miterlimit:10;}
+	.st2{fill:#A77D52;stroke:#010101;stroke-width:15.919;stroke-miterlimit:10;}
+	.st3{fill:#C1282D;stroke:#010101;stroke-width:12.714;stroke-miterlimit:10;}
+	.st4{fill:#FFFFFF;}
+	.st5{fill:#010101;stroke:#010101;stroke-width:14.2183;stroke-miterlimit:10;}
+	.st6{fill:none;stroke:#010101;stroke-width:14.2183;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;}
+	.st7{fill:#010101;stroke:#010101;stroke-width:10.8521;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;}
+	.st8{fill:#010101;}
+</style>
+<g>
+	<path class="st0" d="M213,215.8c-8.1,10.4-16.2,20.9-24.4,31.3c-13.3-14.4-20.9-11.9-34.8-37.5c-8.6-13.6-8.6-13.6-10.3-17.4
+		c-58.9-1.2-106.6-36.8-106.6-52.2c0-13.7,45.1,12.8,89.3,11.4c-36.3-87-44-132.2-30.8-138c9.1-4,18.2,32.6,35,65
+		C164,47.6,165.2,24.7,175,34.6c10.7,10.8,5.5,36.5-22.2,76.9c-12.5,18.2,15.2,52.9,30.2,76.3C192.5,202.5,204.3,206.2,213,215.8z"
+		/>
+	<path class="st0" d="M309.6,215.8c8.1,10.4,16.2,20.9,24.4,31.3c13.3-14.4,20.9-11.9,34.8-37.5c8.6-13.6,8.6-13.6,10.3-17.4
+		c58.9-1.2,106.6-36.8,106.6-52.2c0-13.7-45.1,12.8-89.3,11.4c36.2-87,44-132.2,30.8-138c-9.1-4-18.2,32.6-35,65
+		c-33.5-30.7-34.7-53.5-44.5-43.7c-10.7,10.8-5.5,36.5,22.2,76.9c12.5,18.2-15.2,52.9-30.2,76.3
+		C330.1,202.5,318.3,206.2,309.6,215.8z"/>
+	<path class="st1" d="M377.5,313.8c31.1,0.3,62.5-57.6,53.9-74.7c-8.5-17.2-71.4-21.5-77.8-0.6c5.7,4.4,10.3,18,17.6,35
+		C379,291,378.3,306.6,377.5,313.8z"/>
+	<path class="st1" d="M142.4,313.8c-31.1,0.3-62.4-57.6-53.9-74.7s68.9-21.8,75.3-0.9c-5.7,4.4-7.8,18.4-15.2,35.3
+		C141,291,141.7,306.6,142.4,313.8z"/>
+	<ellipse class="st2" cx="259.5" cy="347.3" rx="117.6" ry="144.8"/>
+	<ellipse class="st3" cx="260.2" cy="400" rx="52.1" ry="32.9"/>
+	
+		<ellipse transform="matrix(0.9104 -0.4138 0.4138 0.9104 -141.4084 131.6591)" class="st4" cx="233.2" cy="392.3" rx="10" ry="5.8"/>
+	<g>
+		<ellipse class="st5" cx="220.3" cy="300" rx="21.9" ry="39.1"/>
+		<ellipse class="st4" cx="211.7" cy="313.5" rx="8.8" ry="13.5"/>
+	</g>
+	<g>
+		<ellipse class="st5" cx="298.9" cy="300.4" rx="22" ry="39.1"/>
+		<ellipse class="st4" cx="290.4" cy="313.9" rx="8.8" ry="13.5"/>
+	</g>
+	<line class="st6" x1="260.2" y1="434.7" x2="260.2" y2="451.9"/>
+	<circle class="st7" cx="260.3" cy="459.4" r="7.5"/>
+	<path class="st8" d="M397.2,258.6c-0.8-5.7-9.8-5.8-9.1,0c0.9,7,0.3,14-2.4,20.6c-2.9,7.2-7.9,11.9-13.1,17.3
+		c-4,4.2,2.4,10.6,6.4,6.4c6.1-6.3,11.6-12,15-20.2C397.2,275.1,398.3,266.8,397.2,258.6z"/>
+	<path class="st8" d="M121.7,258.6c0.8-5.7,9.8-5.8,9.1,0c-0.9,7-0.3,14,2.4,20.6c2.9,7.2,7.9,11.9,13.1,17.3
+		c4.1,4.2-2.4,10.6-6.4,6.4c-6.1-6.3-11.6-12-15-20.2C121.7,275.1,120.6,266.8,121.7,258.6z"/>
+</g>
+</svg>
