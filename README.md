@@ -25,7 +25,7 @@ Elk features include:
 Below is a demontration on a classic 16Mhz Arduino Nano board which has
 2k RAM and 32k flash (see [full sketch](examples/BlinkyJS/BlinkyJS.ino)):
 
-<img src="test/nano.gif" style="border: 1px solid #ccc;" />
+![Elk on Arduino Nano](test/nano.gif)
 
 ## Call Javascript from C
 ```c
