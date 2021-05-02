@@ -22,6 +22,11 @@ Elk features include:
 - Small footprint: about 20KB on flash/disk, about 100 bytes RAM for core VM
 - No bytecode. Interprets JS code directly
 
+Below is a demontration on a classic 16Mhz Arduino Nano board which has
+2k RAM and 32k flash (see [full sketch](examples/BlinkyJS/BlinkyJS.ino)):
+
+<img src="test/nano.gif" style="border: 1px solid #ccc;" />
+
 ## Call Javascript from C
 ```c
 #include <stdio.h>

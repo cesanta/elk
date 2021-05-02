@@ -32,7 +32,7 @@
 #define JS_GC_THRESHOLD 80
 #endif
 
-#ifdef ARDUINO_AVR_NANO
+#if defined(ARDUINO_AVR_NANO) || defined(ARDUINO_AVR_PRO)
 #define JS_NOCB
 #endif
 
@@ -649,7 +649,7 @@ union ffi_val { void *p; w6w_t fp; jw_t w; double d; jsval_t v; };
 struct fficbparam { struct js *js; const char *decl; jsval_t jsfunc; };
 
 static jsval_t call_js(struct js *js, const char *fn, int fnlen);
-//static jsval_t do_call_op(struct js *js, jsval_t func, jsval_t args);
+#ifndef JS_NOCB
 static jw_t fficb(struct fficbparam *cbp, union ffi_val *args) {
   struct js *js = cbp->js;
   char buf[100];
@@ -681,7 +681,6 @@ static jw_t fficb(struct fficbparam *cbp, union ffi_val *args) {
   return 0;
 }
 
-#ifdef JS_NOCB
 static void ffiinitcbargs(union ffi_val *args, jw_t w1, jw_t w2, jw_t w3, jw_t w4, jw_t w5, jw_t w6) { args[0].w = w1; args[1].w = w2; args[2].w = w3; args[3].w = w4; args[4].w = w5; args[5].w = w6; }
 static jw_t fficb1(jw_t w1, jw_t w2, jw_t w3, jw_t w4, jw_t w5, jw_t w6) { union ffi_val args[6]; ffiinitcbargs(args, w1, w2, w3, w4, w5, w6); return fficb((struct fficbparam *) (uintptr_t) w1, args); }
 static jw_t fficb2(jw_t w1, jw_t w2, jw_t w3, jw_t w4, jw_t w5, jw_t w6) { union ffi_val args[6]; ffiinitcbargs(args, w1, w2, w3, w4, w5, w6); return fficb((struct fficbparam *) (uintptr_t) w2, args); }
@@ -720,7 +719,7 @@ static jsval_t call_c(struct js *js, const char *fn, int fnlen) {
         if (fn[i] == 'd') type |= 1 << (n + 1);
         // clang-format off
     switch (fn[i]) {
-#ifdef JS_NOCB
+#ifndef JS_NOCB
 			case '[': args[n++].p = (void *) setfficb(js, v, &cbp, &fn[i + 1], &i); break;
 #endif
       case 'd': if (vtype(v) != T_NUM) return js_err(js, "bad arg %d", n + 1); args[n++].d = tod(v); break;
