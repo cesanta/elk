@@ -92,6 +92,7 @@ Available preprocessor definitions:
 | ------------ | --------- | ----------- |
 |`JS_EXPR_MAX` | 20        | Maximum tokens in expression. Expression evaluation function declares an on-stack array `jsval_t stk[JS_EXPR_MAX];`. Increase to allow very long expressions. Reduce to save C stack space. |
 |`JS_DUMP`     | undefined | Define to enable `js_dump(struct js *)` function which prints JS memory internals to stdout |
+|`JS_GC_THRESHOLD` | 80 | A percentage (from 0 to 100) of runtime memory when GC is triggered. A trigger point is a beginning of statement block (function body, loop body, etc) |
 
 Note: on ESP32 or ESP8266, compiled functions go into the `.text` ELF
 section and subsequently into the IRAM MCU memory. It is possible to save

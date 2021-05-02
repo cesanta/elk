@@ -28,6 +28,10 @@
 #define JS_EXPR_MAX 20
 #endif
 
+#ifndef JS_GC_THRESHOLD
+#define JS_GC_THRESHOLD 80
+#endif
+
 typedef uint32_t jsoff_t;
 
 struct js {
@@ -388,6 +392,12 @@ static void js_unmark_used_entities(struct js *js) {
   }
 }
 
+void js_gc(struct js *js) {
+  js_mark_all_entities_for_deletion(js);
+  js_unmark_used_entities(js);
+  js_delete_marked_entities(js);
+}
+
 static inline jsoff_t skipws(const char *code, jsoff_t n, jsoff_t pos) {
   while (pos < n && is_space(code[pos])) pos++;
   return pos;
@@ -518,6 +528,8 @@ static void sortops(uint8_t *ops, int nops, jsval_t *stk) {
 }
 
 static jsval_t js_block(struct js *js, bool create_scope) {
+  // If we're low on runtime memory, run GC
+  if (js->brk > js->size * JS_GC_THRESHOLD / 100) js_gc(js);
   jsval_t res = mkval(T_UNDEF, 0);
   jsoff_t brk1 = js->brk;
   if (create_scope) js->scope = mkobj(js, vdata(js->scope));  // Enter new scope
@@ -661,8 +673,9 @@ static jw_t fficb(struct fficbparam *cbp, union ffi_val *args) {
   jsoff_t fnlen, fnoff = vstr(js, cbp->jsfunc, &fnlen);
   jsval_t res = call_js(js, (char *) &js->mem[fnoff], fnlen);
   js->code = code, js->clen = clen, js->pos = pos;  // Restore parser
+  //printf("FFICB->[%s]\n", js_str(js, res));
   switch (cbp->decl[0]) {
-    case 'i': return (long) tod(res);
+    case 'i': return (long) (is_nan(res) ? 0.0 : tod(res));
     case 'd': case 'p': return (jw_t) tod(res);
     case 's': if (vtype(res) == T_STR) return (jw_t) (js->mem + vstr(js, res, NULL));
   }
@@ -1126,12 +1139,6 @@ static jsval_t js_stmt(struct js *js, uint8_t etok) {
   //clang-format on
 }
 // clang-format on
-
-void js_gc(struct js *js) {
-  js_mark_all_entities_for_deletion(js);
-  js_unmark_used_entities(js);
-  js_delete_marked_entities(js);
-}
 
 struct js *js_create(void *buf, size_t len) {
   struct js *js = NULL;
