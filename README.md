@@ -254,8 +254,8 @@ and keep a global namespace tidy. For example, all GPIO related functions
 can go into the `gpio` object:
 
 ```c
-  jsval_t gpio = js_glob(js);             // Equivalent to:
-  js_set(js, js_glob(), "gpio", gpio);    // let gpio = {};
+  jsval_t gpio = js_glob(js);               // Equivalent to:
+  js_set(js, js_glob(js), "gpio", gpio);    // let gpio = {};
 
   js_set(js, gpio, "mode",  js_import(js, (uintptr_t) func1, "iii");  // Create gpio.mode(pin, mode)
   js_set(js, gpio, "read",  js_import(js, (uintptr_t) func2, "ii");   // Create gpio.read(pin)
