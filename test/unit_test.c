@@ -349,10 +349,17 @@ static const char *fmt(double d) {
 static int op(int (*fp)(int, void *), int a, int b, void *userdata) {
   return fp(a + b, userdata);
 }
+// Simulate timer callback. Save callback address & param and call later
+static void (*s_op2fp)(int, void *);
+static void *s_op2fp_param;
+static void op2(void (*fp)(int, void *), void *userdata) {
+  s_op2fp = fp;
+  s_op2fp_param = userdata;
+}
 
 static void test_ffi(void) {
   struct js *js;
-  char mem[sizeof(*js) + 500];
+  char mem[sizeof(*js) + 1500];
   assert((js = js_create(mem, sizeof(mem))) != NULL);
   jsval_t obj = js_mkobj(js);
   js_set(js, js_glob(js), "os", obj);
@@ -363,6 +370,7 @@ static void test_ffi(void) {
   js_set(js, obj, "sum3", js_import(js, (uintptr_t) sum3, "did"));
   js_set(js, obj, "fmt", js_import(js, (uintptr_t) fmt, "sd"));
   js_set(js, obj, "op", js_import(js, (uintptr_t) op, "i[iiu]iiu"));
+  js_set(js, obj, "op2", js_import(js, (uintptr_t) op2, "v[viu]u"));
   assert(ev(js, "os.atoi()", "ERROR: bad arg 1"));
   assert(ev(js, "os.bad1(1)", "ERROR: bad sig"));
   assert(ev(js, "os.sum1(1)", "ERROR: bad arg 2"));
@@ -380,6 +388,16 @@ static void test_ffi(void) {
   assert(ev(js, "let f = function(){return 1;}; 7;", "7"));
   assert(ev(js, "a=b=0; while(a++<1){os.sum1(1,2);b++;};b", "1"));
   assert(ev(js, "a=b=0; while(a++<1){f();f();b++;};b", "1"));
+
+  // Test that C can trigger JS callback even after GC
+  assert(ev(js, "'foo'; 'bar'; 1", "1"));  // This will be GC-ed
+  assert(ev(js, "a=0; os.op2(function(x){a=x;},null); 1", "1"));
+  jsoff_t brk = js->brk;
+  assert(ev(js, "", "undefined"));  // Trigger GC
+  assert(js->brk < brk);            // Make sure we've deleted some stuff
+  assert(s_op2fp != NULL);
+  s_op2fp(992, s_op2fp_param);
+  assert(ev(js, "a", "992"));
 }
 
 int main(void) {

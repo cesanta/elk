@@ -23,7 +23,7 @@ Elk features include:
 - No bytecode. Interprets JS code directly
 
 Below is a demontration on a classic 16Mhz Arduino Nano board which has
-2k RAM and 32k flash (see [full sketch](examples/BlinkyJS/BlinkyJS.ino)):
+2k RAM and 30k flash (see [full sketch](examples/BlinkyJS/BlinkyJS.ino)):
 
 ![Elk on Arduino Nano](test/nano.gif)
 
@@ -172,40 +172,37 @@ Import an existing C function with address `funcaddr` and signature `signature`.
 Return imported function, suitable for subsequent `js_set()`.
 
 - `js`: JS instance
-- `func`: C function address: `(unsigned long) &my_function`
+- `funcaddr`: C function address: `(uintptr_t) &my_function`
 - `signature`: specifies C function signature that tells how JS engine
    should marshal JS arguments to the C function.
 	 First letter specifies return value type, following letters - parameters:
+   - `b`: C `bool` type
    - `d`: C `double` type
    - `i`: C integer type: `char`, `short`, `int`, `long`
-   - `s`: C nul-terminated string, `char *` type
+   - `s`: C string, a nul-terminated `char *`
    - `j`: marshals `jsval_t`
-   - `m`: marshals current `struct js *`
+   - `m`: marshals current `struct js *`. In JS, pass `null`
    - `p`: marshals C pointer
-   - `v`: valid only for return type, means `void`
+   - `v`: valid only for the return value, means `void`
 
 The imported C function must satisfy the following requirements:
 
-- A function must have 6 or less parameters, but no more than 6
-- Parameters types must be:
-   - C integer types that are machine word wide or smaller - like `char`, `uint16_t`, `int`, `long`, etc
-   - Pointer types
-   - C `double` types
+- A function must have maximum 6 parameters
 - C `double` parameters could be only 1st ot 2nd. For example, function
   `void foo(double x, double y, struct bar *)` could be imported, but
   `void foo(struct bar *, double x, double y)` could not
 - C++ functions must be declared as `extern "C"`
-- Functions with C types `float` or `bool` cannot be imported
+- Functions with `float` params cannot be imported. Write wrappers with `double`
 
 Here are some example of the import specifications:
-- `int sum(int)` -> `js_import(js, sum, "ii")`	
-- `double sub(double a, double b)` -> `js_import(js, sub, "ddd")`
-- `int rand(void)` -> `js_import(js, rand, "i")`
-- `unsigned long strlen(char *s)` -> `js_import(js, strlen, "is")`
-- `char *js_str(struct js *, js_val_t)` -> `js_import(js, js_str, "smj")`
+- `int sum(int)` -> `js_import(js, (uintptr_t) sum, "ii")`
+- `double sub(double a, double b)` -> `js_import(js, (uintptr_t) sub, "ddd")`
+- `int rand(void)` -> `js_import(js, (uintptr_t) rand, "i")`
+- `unsigned long strlen(char *s)` -> `js_import(js, (uintptr_t) strlen, "is")`
+- `char *js_str(struct js *, js_val_t)` -> `js_import(js, (uintptr_t) js_str, "smj")`
 
 In some cases, C APIs use callback functions. For example, a timer C API could
-specify a time interval, a C function to call, and function parameter. It is
+specify a time interval, a C function to call, and a function parameter. It is
 possible to marshal JS function as a C callback - in other words, it is
 possible to pass JS functions as C callbacks.
 
@@ -215,7 +212,8 @@ imported function. We call this `void *` parameter a "userdata" parameter.
 
 The C callback specification is enclosed into the square brackets `[...]`.
 In addition to the signature letters above, a new letter `u` is available
-that specifies userdata parameter. Here is a complete example:
+that specifies userdata parameter. In JS, pass `null` for `u` param.
+Here is a complete example:
 
 ```c
 #include <stdio.h>
