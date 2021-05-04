@@ -168,7 +168,6 @@ static bool is_ident_continue(int c) { return c == '_' || c == '$' || is_alpha(c
 static bool is_err(jsval_t v) { return vtype(v) == T_ERR; }
 static bool is_op(uint8_t tok) { return tok >= TOK_DOT; }
 static bool is_unary(uint8_t tok) { return tok >= TOK_POSTINC && tok <= TOK_UMINUS; }
-//static bool is_right_assoc(uint8_t tok) { return (tok >= TOK_NOT && tok <= TOK_UMINUS) || (tok >= TOK_Q && tok <= TOK_OR_ASSIGN) || tok == TOK_Q || tok == TOK_COLON; }
 static bool is_right_assoc(uint8_t tok) { return (tok >= TOK_NOT && tok <= TOK_UMINUS) || (tok >= TOK_Q && tok <= TOK_OR_ASSIGN); }
 static bool is_assign(uint8_t tok) { return (tok >= TOK_ASSIGN && tok <= TOK_OR_ASSIGN); }
 static void saveoff(struct js *js, jsoff_t off, jsoff_t val) { memcpy(&js->mem[off], &val, sizeof(val)); }
@@ -867,32 +866,20 @@ static jsval_t do_logical_or(struct js *js, jsval_t l, jsval_t r) {
   return mkval(T_BOOL, js_truthy(js, r) ? 1 : 0);
 }
 
-static jsval_t do_q(struct js *js, jsval_t l, jsval_t rhs) {
-  if (js->flags & F_NOEXEC) return rhs;
-  if (!js_truthy(js, l)) js->flags |= F_NOEXEC;
-  return rhs;
-}
-
-static jsval_t do_colon(struct js *js, jsval_t lhs, jsval_t rhs) {
-  bool f = js->flags & F_NOEXEC;
-  if (f) js->flags &= ~F_NOEXEC;
-  return f ? rhs : lhs;
-}
-
 // clang-format off
 static jsval_t do_op(struct js *js, uint8_t op, jsval_t lhs, jsval_t rhs) {
   jsval_t l = resolveprop(js, lhs), r = resolveprop(js, rhs);
   // printf("OP %d %d %d\n", op, vtype(lhs), vtype(r));
-  if (op == TOK_Q) return do_q(js, l, rhs);
-  if (op == TOK_COLON) return do_colon(js, lhs, rhs);
-  if (op == TOK_LAND) return mkval(T_BOOL, js_truthy(js, l) && js_truthy(js, r) ? 1 : 0);
-  if (op == TOK_LOR) return do_logical_or(js, l, r);
-  if (op == TOK_TYPEOF) return mkstr(js, typestr(vtype(r)), strlen(typestr(vtype(r))));
-  if (op == TOK_CALL) return do_call_op(js, l, r);
   if (is_assign(op) && vtype(lhs) != T_PROP) return js_err(js, "bad lhs");
-  if (op == TOK_ASSIGN) return assign(js, lhs, r);
-  if (op == TOK_POSTINC) { do_assign_op(js, TOK_PLUS_ASSIGN, lhs, tov(1)); return l; }
-  if (op == TOK_POSTDEC) { do_assign_op(js, TOK_MINUS_ASSIGN, lhs, tov(1)); return l; }
+  switch (op) {
+    case TOK_LAND:    return mkval(T_BOOL, js_truthy(js, l) && js_truthy(js, r) ? 1 : 0);
+    case TOK_LOR:     return do_logical_or(js, l, r);
+    case TOK_TYPEOF:  return mkstr(js, typestr(vtype(r)), strlen(typestr(vtype(r))));
+    case TOK_CALL:    return do_call_op(js, l, r);
+    case TOK_ASSIGN:  return assign(js, lhs, r);
+    case TOK_POSTINC: { do_assign_op(js, TOK_PLUS_ASSIGN, lhs, tov(1)); return l; }
+    case TOK_POSTDEC: { do_assign_op(js, TOK_MINUS_ASSIGN, lhs, tov(1)); return l; }
+  }
   if (is_assign(op))    return do_assign_op(js, op, lhs, r);
   if (vtype(l) == T_STR && vtype(r) == T_STR) return do_string_op(js, op, l, r);
   if (is_unary(op) && vtype(r) != T_NUM) return js_err(js, "type mismatch");
@@ -934,10 +921,10 @@ static uint8_t getri(uint32_t mask, uint8_t ri) {
 static jsval_t js_str_literal(struct js *js) {
   uint8_t *in = (uint8_t *) &js->code[js->toff];
   uint8_t *out = &js->mem[js->brk + sizeof(jsoff_t)];
-  size_t n1 = 0, n2 = 0;
+  int n1 = 0, n2 = 0;
   // printf("STR %u %lu %lu\n", js->brk, js->tlen, js->clen);
   if (js->brk + sizeof(jsoff_t) + js->tlen > js->size) return js_err(js, "oom");
-  while (n2++ < js->tlen - 2) {
+  while (n2++ + 2 < (int) js->tlen) {
     if (in[n2] == '\\') {
       if (in[n2 + 1] == in[0]) {
         out[n1++] = in[0];
@@ -981,7 +968,7 @@ static jsval_t js_obj_literal(struct js *js) {
 }
 
 static jsval_t js_func_literal(struct js *js) {
-  size_t pos = js->pos;
+  jsoff_t pos = js->pos;
   uint8_t flags = js->flags;  // Save current flags
   if (next(js) != TOK_LPAREN) return js_err(js, "parse error");
   for (bool expect_ident = false; next(js) != TOK_EOF; expect_ident = true) {
@@ -1095,7 +1082,7 @@ static jsval_t js_let(struct js *js) {
   for (;;) {
     uint8_t tok = next(js);
     if (tok != TOK_IDENTIFIER) return js_err(js, "parse error");
-    size_t noff = js->toff, nlen = js->tlen;
+    jsoff_t noff = js->toff, nlen = js->tlen;
     if ((tok = next(js)) == TOK_SEMICOLON || tok == TOK_EOF) break;
     if (tok != TOK_ASSIGN) return js_err(js, "parse error");
     jsval_t res = js_expr(js, TOK_COMMA, TOK_SEMICOLON);
@@ -1232,7 +1219,7 @@ int js_usage(struct js *js) {
 
 jsval_t js_import(struct js *js, uintptr_t fn, const char *signature) {
   char buf[64];
-  int n = snprintf(buf, sizeof(buf), "%s@%" PRIxPTR, signature, fn);
+  size_t n = snprintf(buf, sizeof(buf), "%s@%" PRIxPTR, signature, fn);
   jsval_t str = mkstr(js, buf, n);
   return mkval(T_FUNC, vdata(str));
 }

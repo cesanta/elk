@@ -244,6 +244,8 @@ static void test_flow(void) {
   assert(ev(js, "a=0; if (0) a=1; else if (1) a=2; a;", "2"));
   assert(ev(js, "a=0; if (0){7;a=1;}else if (1){7;a=2;} a;", "2"));
   assert(ev(js, "a=0; if(0){7;a=1;}else if(0){5;a=2;}else{3;a=3;} a;", "3"));
+#if 0
+  // Ternary operator
   assert(ev(js, "1?2:3", "2"));
   assert(ev(js, "0?2:3", "3"));
   assert(ev(js, "0?1+1:1+2", "3"));
@@ -251,7 +253,6 @@ static void test_flow(void) {
   assert(ev(js, "a", "3"));
   assert(ev(js, "a=b=0; a=b=0?1+1:1+2", "3"));
   assert(ev(js, "a=0?1+1:1+2; a++; a", "4"));
-#if 0
   assert(ev(js, "a=0; 0?a++:a--; a", "-1"));
   assert(ev(js, "a=1?2:0?3:4", "2"));
 #endif
