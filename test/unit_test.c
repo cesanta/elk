@@ -252,6 +252,7 @@ static void test_flow(void) {
   assert(ev(js, "a=b=0; a=b=0?1+1:1+2", "3"));
   assert(ev(js, "a=0?1+1:1+2; a++; a", "4"));
 #if 0
+  assert(ev(js, "a=0; 0?a++:a--; a", "-1"));
   assert(ev(js, "a=1?2:0?3:4", "2"));
 #endif
 }

@@ -6,28 +6,28 @@
 
 
 Elk is a tiny embeddable JavaScript engine that implements a small but usable
-subset of ES6. It is degined for microcontroller development. Instead of
-writing firmware code in C/C++, Elk allows to develop in JS. 
-Another usecase is to provide customers with a secure, protected scripting
+subset of ES6. It is designed for microcontroller development. Instead of
+writing firmware code in C/C++, Elk allows to develop in JavaScript. 
+Another use case is providing customers with a secure, protected scripting
 environment for product customisation.
 
 Elk features include:
 
-- Cross platform. Works anywhere from 8-bit microcontollers to 64-bit servers
+- Cross platform. Works anywhere from 8-bit microcontrollers to 64-bit servers
 - Zero dependencies. Builds cleanly by ISO C or ISO C++ compilers
 - Easy to embed: just copy `elk.c` and `elk.h` to your source tree
 - Very small and simple embedding API
-- Allows to call C/C++ functions from Javascript and vice versa
+- Allows to call C/C++ functions from JavaScript and vice versa
 - Does not use malloc. Operates with a given memory buffer only
 - Small footprint: about 20KB on flash/disk, about 100 bytes RAM for core VM
 - No bytecode. Interprets JS code directly
 
-Below is a demontration on a classic 16Mhz Arduino Nano board which has
+Below is a demonstration on a classic 16Mhz Arduino Nano board which has
 2k RAM and 30k flash (see [full sketch](examples/BlinkyJS/BlinkyJS.ino)):
 
 ![Elk on Arduino Nano](test/nano.gif)
 
-## Call Javascript from C
+## Call JavaScript from C
 ```c
 #include <stdio.h>
 #include "elk.h"
@@ -41,7 +41,7 @@ int main(void) {
 }
 ```
 
-## Call C from Javascript
+## Call C from JavaScript
 
 This demonstrates how JS code can import and call existing C functions:
 
@@ -179,7 +179,7 @@ Return imported function, suitable for subsequent `js_set()`.
    - `b`: C `bool` type
    - `d`: C `double` type
    - `i`: C integer type: `char`, `short`, `int`, `long`
-   - `s`: C string, a nul-terminated `char *`
+   - `s`: C string, a 0-terminated `char *`
    - `j`: marshals `jsval_t`
    - `m`: marshals current `struct js *`. In JS, pass `null`
    - `p`: marshals C pointer
@@ -188,7 +188,7 @@ Return imported function, suitable for subsequent `js_set()`.
 The imported C function must satisfy the following requirements:
 
 - A function must have maximum 6 parameters
-- C `double` parameters could be only 1st ot 2nd. For example, function
+- C `double` parameters could be only 1st or 2nd. For example, function
   `void foo(double x, double y, struct bar *)` could be imported, but
   `void foo(struct bar *, double x, double y)` could not
 - C++ functions must be declared as `extern "C"`
@@ -272,9 +272,9 @@ can go into the `gpio` object:
 int js_usage(struct js *);
 ```
 
-Return memory usage percenage - a number between 0 and 100.
-If required, trigger a garbage collection by evaluating an empty expression:
-`js_eval(js, "", 0)`.
+Return memory usage percentage - a number between 0 and 100.
+See `JS_GC_THRESHOLD` build time option. Note: you could trigger garbage
+collection by evaluating an empty expression: `js_eval(js, "", 0)`.
 
 
 ## LICENSE
