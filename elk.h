@@ -17,7 +17,7 @@
 #pragma once
 #include <stdint.h>
 
-#define JS_VERSION "2.0.3"
+#define JS_VERSION "2.0.4"
 
 struct js;                 // JS engine (opaque)
 typedef uint64_t jsval_t;  // JS value placeholder
