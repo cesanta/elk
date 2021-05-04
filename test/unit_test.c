@@ -234,6 +234,15 @@ static void test_flow(void) {
   assert(ev(js, "a = b = 0; while (b++ < 10) while (a < b) a++; a", "10"));
   assert(ev(js, "a = 0; while (1) { if (a++ < 10) continue; break;} a", "11"));
   assert(ev(js, "a=b=0; while (b++<10) {true;a++;} a", "10"));
+  assert(ev(js, "a=b=0; if (false) b++; else b--; b", "-1"));
+  assert(ev(js, "a=b=0; if (false) {b++;} else {b--;} b", "-1"));
+  assert(ev(js, "a=b=0; if (false) {2;b++;} else {2;b--;} b", "-1"));
+  assert(ev(js, "a=b=0; if (true) b++; else b--; b", "1"));
+  assert(ev(js, "a=b=0; if (true) {2;b++;} else {2;b--;} b", "1"));
+  assert(ev(js, "a=0; if (1) a=1; else if (0) a=2; a;", "1"));
+  assert(ev(js, "a=0; if (0) a=1; else if (1) a=2; a;", "2"));
+  assert(ev(js, "a=0; if (0){7;a=1;}else if (1){7;a=2;} a;", "2"));
+  assert(ev(js, "a=0; if(0){7;a=1;}else if(0){5;a=2;}else{3;a=3;} a;", "3"));
 }
 
 static void test_scopes(void) {

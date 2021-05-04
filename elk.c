@@ -1104,11 +1104,18 @@ static jsval_t js_if(struct js *js) {
   if (next(js) != TOK_LPAREN) return js_err(js, "parse error");
   jsval_t cond = js_expr(js, TOK_RPAREN, TOK_EOF);
   if (js->tok != TOK_RPAREN) return js_err(js, "parse error");
-  uint8_t flags = js->flags;
+  bool noexec = js->flags & F_NOEXEC;
   bool cond_true = js_truthy(js, cond);
   if (!cond_true) js->flags |= F_NOEXEC;
   jsval_t res = js_block_or_stmt(js);
-  if (!cond_true && !(flags & F_NOEXEC)) js->flags &= ~F_NOEXEC;
+  if (!cond_true && !noexec) js->flags &= ~F_NOEXEC;
+  if (lookahead(js) == TOK_ELSE) {
+    next(js);
+    if (cond_true) js->flags |= F_NOEXEC;
+    res = js_block_or_stmt(js);
+    if (cond_true && !noexec) js->flags &= ~F_NOEXEC;
+  }
+  // printf("IF: else %d\n", lookahead(js) == TOK_ELSE);
   return res;
 }
 
@@ -1158,8 +1165,8 @@ static jsval_t js_stmt(struct js *js, uint8_t etok) {
     case TOK_CASE: case TOK_CATCH: case TOK_CLASS: case TOK_CONST:
     case TOK_DEFAULT: case TOK_DELETE: case TOK_DO: case TOK_FINALLY:
     case TOK_FOR: case TOK_IN: case TOK_INSTANCEOF: case TOK_NEW:
-    case TOK_ELSE: case TOK_SWITCH: case  TOK_THIS: case TOK_THROW:
-    case TOK_TRY: case TOK_VAR: case TOK_VOID: case TOK_WITH: case TOK_YIELD:
+    case TOK_SWITCH: case  TOK_THIS: case TOK_THROW: case TOK_TRY:
+    case TOK_VAR: case TOK_VOID: case TOK_WITH: case TOK_YIELD:
       return js_err(js, "'%.*s' not implemented", (int) js->tlen, js->code + js->toff);
     case TOK_CONTINUE:  return js_continue(js);
     case TOK_BREAK:     return js_break(js);
