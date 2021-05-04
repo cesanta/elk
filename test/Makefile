@@ -39,7 +39,7 @@ arduino:
 uno: arduino
 	rm -rf tmp; mkdir tmp; cp ../examples/BlinkyJS/BlinkyJS.ino tmp/tmp.ino
 	cp ../elk.c ../elk.h tmp/
-	$(DOCKER) mdashnet/cc2 ./arduino/arduino --verify --board arduino:avr:uno tmp/tmp.ino
+	$(DOCKER) mdashnet/cc2 ./arduino/arduino --verify --board arduino:avr:nano tmp/tmp.ino
 
 cli:
 	$(CC) ../elk.c ../examples/cmdline/main.c $(CFLAGS) -o $@

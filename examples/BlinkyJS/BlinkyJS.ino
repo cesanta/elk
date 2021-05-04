@@ -15,15 +15,15 @@ void setup() {
   js_set(js, gpio, "mode", js_import(js, (uintptr_t) myMode, "vii"));
   js_set(js, gpio, "write", js_import(js, (uintptr_t) myWrite, "vii"));
 
-  js_eval(js, "let pin = 13; "        // LED pin. Usually 13, but double-check
-              "gpio.mode(pin, 1); "   // Set OUTPUT mode on a LED pin
-              "while (true) { "
-              "  delay(300); "
-              "  gpio.write(pin, 1); "
-              "  delay(300); "
-              "  gpio.write(pin, 0); "
-              "}",
-              ~0);
+  js_eval(js, "let pin = 13;"     // LED pin. Usually 13, but double-check
+          "gpio.mode(pin, 1);"    // Set OUTPUT mode on a LED pin
+          "while (true) {"
+          "  delay(300);"
+          "  gpio.write(pin, 1);"
+          "  delay(300);"
+          "  gpio.write(pin, 0);"
+          "}",
+          ~0);
 }
 
 void loop() {

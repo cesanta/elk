@@ -72,6 +72,7 @@ static void test_errors(void) {
   char mem[200];
   struct js *js;
   assert((js = js_create(mem, sizeof(mem))) != NULL);
+  assert(ev(js, "~~~~~~~~~~~~~~~~~~~~~~", "ERROR: expr too deep"));
   assert(ev(js, "+", "ERROR: bad expr"));
   assert(ev(js, "2+", "ERROR: bad expr"));
   assert(ev(js, "2 * * 2", "ERROR: bad expr"));
@@ -243,6 +244,16 @@ static void test_flow(void) {
   assert(ev(js, "a=0; if (0) a=1; else if (1) a=2; a;", "2"));
   assert(ev(js, "a=0; if (0){7;a=1;}else if (1){7;a=2;} a;", "2"));
   assert(ev(js, "a=0; if(0){7;a=1;}else if(0){5;a=2;}else{3;a=3;} a;", "3"));
+  assert(ev(js, "1?2:3", "2"));
+  assert(ev(js, "0?2:3", "3"));
+  assert(ev(js, "0?1+1:1+2", "3"));
+  assert(ev(js, "a=0?1+1:1+2", "3"));
+  assert(ev(js, "a", "3"));
+  assert(ev(js, "a=b=0; a=b=0?1+1:1+2", "3"));
+  assert(ev(js, "a=0?1+1:1+2; a++; a", "4"));
+#if 0
+  assert(ev(js, "a=1?2:0?3:4", "2"));
+#endif
 }
 
 static void test_scopes(void) {
@@ -326,6 +337,9 @@ static void test_bool(void) {
   assert(ev(js, "1 && ''", "false"));
   assert(ev(js, "1 && false || true", "true"));
   assert(ev(js, "1 && false && true", "false"));
+  assert(ev(js, "1 === 2", "false"));
+  assert(ev(js, "1 !== 2", "true"));
+  assert(ev(js, "1 === true", "ERROR: type mismatch"));
 }
 
 static void test_gc(void) {
