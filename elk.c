@@ -418,9 +418,21 @@ void js_gc(struct js *js) {
   js_delete_marked_entities(js);
 }
 
-static jsoff_t skipws(const char *code, jsoff_t n, jsoff_t pos) {
-  while (pos < n && is_space(code[pos])) pos++;
-  return pos;
+// Skip whitespaces and comments
+static jsoff_t skiptonext(const char *code, jsoff_t len, jsoff_t n) {
+  printf("SKIP: [%.*s]\n", len - n, &code[n]);
+  while (n < len) {
+    if (is_space(code[n])) {
+      n++;
+    } else if (n + 1 < len && code[n] == '/' && code[n + 1] == '/') {
+      for (n += 2; n < len && code[n] != '\n';) n++;
+    } else if (n + 3 < len && code[n] == '/' && code[n + 1] == '*') {
+      for (n += 4; n < len && (code[n - 2] != '*' || code[n - 1] != '/');) n++;
+    } else {
+      break;
+    }
+  }
+  return n;
 }
 
 static bool streq(const char *buf, size_t len, const char *p, size_t n) {
@@ -460,7 +472,7 @@ static uint8_t parseident(const char *buf, jsoff_t len, jsoff_t *tlen) {
 
 static uint8_t next(struct js *js) {
   js->tok = TOK_ERR;
-  js->toff = js->pos = skipws(js->code, js->clen, js->pos);
+  js->toff = js->pos = skiptonext(js->code, js->clen, js->pos);
   js->tlen = 0;
   const char *buf = js->code + js->toff;
   // clang-format off
@@ -551,7 +563,7 @@ static jsval_t js_block(struct js *js, bool create_scope) {
   if (create_scope) js->scope = mkobj(js, vdata(js->scope));  // Enter new scope
   jsoff_t brk2 = js->brk;
   while (js->tok != TOK_EOF && js->tok != TOK_RBRACE) {
-    js->pos = skipws(js->code, js->clen, js->pos);
+    js->pos = skiptonext(js->code, js->clen, js->pos);
     if (js->pos < js->clen && js->code[js->pos] == '}') break;
     res = js_stmt(js, TOK_RBRACE);
   }
@@ -563,10 +575,15 @@ static jsval_t js_block(struct js *js, bool create_scope) {
 
 static jsval_t js_eval_nogc(struct js *js, const char *buf, jsoff_t len) {
   jsval_t res = mkval(T_UNDEF, 0);
+  js->tok = TOK_ERR;
   js->code = buf;
   js->clen = len;
   js->pos = 0;
-  while (js->pos < js->clen && !is_err(res)) res = js_stmt(js, TOK_SEMICOLON);
+  while (js->tok != TOK_EOF && !is_err(res)) {
+    js->pos = skiptonext(js->code, js->clen, js->pos);
+    if (js->pos >= js->clen) break;
+    res = js_stmt(js, TOK_SEMICOLON);
+  }
   return res;
 }
 
@@ -731,7 +748,7 @@ static jsval_t call_c(struct js *js, const char *fn, int fnlen, jsoff_t fnoff) {
   jsoff_t cbp = 0;
   int n = 0, i, type = fn[0] == 'd' ? 1 : 0;
   for (i = 1; i < fnlen && fn[i] != '@' && n < MAX_FFI_ARGS; i++) {
-    js->pos = skipws(js->code, js->clen, js->pos);
+    js->pos = skiptonext(js->code, js->clen, js->pos);
     if (js->pos >= js->clen) return js_err(js, "bad arg %d", n + 1);
     jsval_t v = resolveprop(js, js_expr(js, TOK_COMMA, TOK_RPAREN));
     // printf("  arg %d[%c] -> %s\n", n, fn[i], js_str(js, v));
@@ -766,7 +783,7 @@ static jsval_t call_c(struct js *js, const char *fn, int fnlen, jsoff_t fnoff) {
 			case 'u': args[n++].p = &js->mem[cbp]; break;
       default: return js_err(js, "bad sig");
     }
-    js->pos = skipws(js->code, js->clen, js->pos);
+    js->pos = skiptonext(js->code, js->clen, js->pos);
     if (js->pos < js->clen && js->code[js->pos] == ',') js->pos++;
   }
   uintptr_t f = (uintptr_t) unhexn((uint8_t *) &fn[i + 1], fnlen - i - 1);
@@ -809,7 +826,7 @@ static jsval_t call_js(struct js *js, const char *fn, int fnlen) {
   js->scope = mkobj(js, vdata(js->scope));  // Create function call scope
   // Loop over arguments list "(a, b)" and set scope variables
   while (fnpos < fnlen) {
-    fnpos = skipws(fn, fnlen, fnpos);              // Skip to the identifier
+    fnpos = skiptonext(fn, fnlen, fnpos);          // Skip to the identifier
     if (fnpos < fnlen && fn[fnpos] == ')') break;  // Closing paren? break!
     jsoff_t identlen = 0;                          // Identifier length
     uint8_t tok = parseident(&fn[fnpos], fnlen - fnpos, &identlen);
@@ -818,19 +835,19 @@ static jsval_t call_js(struct js *js, const char *fn, int fnlen) {
     // printf("  [%.*s] -> %u [%.*s] -> ", (int) identlen, &fn[fnpos], js->pos,
     //(int) js->clen, js->code);
     // Calculate argument's value.
-    js->pos = skipws(js->code, js->clen, js->pos);
+    js->pos = skiptonext(js->code, js->clen, js->pos);
     jsval_t v = js->code[js->pos] == ')' ? mkval(T_UNDEF, 0)
                                          : js_expr(js, TOK_COMMA, TOK_RPAREN);
     // printf("[%s]\n", js_str(js, v));
     // Set argument in the function scope
     setprop(js, js->scope, mkstr(js, &fn[fnpos], identlen), v);
-    js->pos = skipws(js->code, js->clen, js->pos);
+    js->pos = skiptonext(js->code, js->clen, js->pos);
     if (js->pos < js->clen && js->code[js->pos] == ',') js->pos++;
-    fnpos = skipws(fn, fnlen, fnpos + identlen);     // Skip past identifier
+    fnpos = skiptonext(fn, fnlen, fnpos + identlen);  // Skip past identifier
     if (fnpos < fnlen && fn[fnpos] == ',') fnpos++;  // And skip comma
   }
   if (fnpos < fnlen && fn[fnpos] == ')') fnpos++;  // Skip to the function body
-  fnpos = skipws(fn, fnlen, fnpos);                // Up to the opening brace
+  fnpos = skiptonext(fn, fnlen, fnpos);            // Up to the opening brace
   if (fnpos < fnlen && fn[fnpos] == '{') fnpos++;  // And skip the brace
   jsoff_t n = fnlen - fnpos - 1;  // Function code with stripped braces
   // printf("  %d. calling, %u [%.*s]\n", js->flags, n, (int) n, &fn[fnpos]);
@@ -850,7 +867,7 @@ static jsval_t do_call_op(struct js *js, jsval_t func, jsval_t args) {
   jsoff_t clen = js->clen, pos = js->pos;   // code, position and code length
   js->code = &js->code[coderefoff(args)];   // Point parser to args
   js->clen = codereflen(args);              // Set args length
-  js->pos = skipws(js->code, js->clen, 0);  // Skip to 1st arg
+  js->pos = skiptonext(js->code, js->clen, 0);  // Skip to 1st arg
   // printf("CALL [%.*s] -> %.*s\n", (int) js->clen, js->code, (int) fnlen, fn);
   uint8_t tok = js->tok, flags = js->flags;  // Save flags
   jsval_t res = fn[0] != '(' ? call_c(js, fn, fnlen, fnoff - sizeof(jsoff_t))
@@ -1181,6 +1198,7 @@ static jsval_t js_stmt(struct js *js, uint8_t etok) {
     case TOK_LBRACE:    return js_block(js, true);
     case TOK_WHILE:     return js_while(js);
     case TOK_RETURN:    return js_return(js);
+    case TOK_EOF:       return mkval(T_UNDEF, 0);
     default:
       js->pos -= js->tlen; // Unparse last parsed token
       return resolveprop(js, js_expr(js, etok, TOK_SEMICOLON));

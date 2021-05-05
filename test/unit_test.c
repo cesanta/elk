@@ -160,8 +160,21 @@ static void test_basic(void) {
   assert(ev(js, "a = 0; 1 + a++ + 2", "3"));
   assert(ev(js, "a", "1"));
   assert(ev(js, "a = 0; 3 * (1 + a++ + (2 + a++))", "12"));
-  // js_gc(js);
-  // js_dump(js);
+
+  assert(ev(js, "1+2;", "3"));
+  assert(ev(js, "1+2; ", "3"));
+  assert(ev(js, "1+2;//9", "3"));
+  assert(ev(js, "1+2;//", "3"));
+  assert(ev(js, "1/**/+2;//9", "3"));
+  assert(ev(js, "1/**/+2;/**///9", "3"));
+  assert(ev(js, "1/**/+ /* some comment*/2;/**///9", "3"));
+  assert(ev(js, "1/**/+ /* */2;/**///9", "3"));
+  assert(ev(js, "1/**/+ /* \n*/2;/**///9", "3"));
+  assert(ev(js, "1 + /* * */ 2;", "3"));
+  assert(ev(js, "1 + /* **/ 2;", "3"));
+  assert(ev(js, "1 + /* ///**/ 2;", "3"));
+  assert(ev(js, "1 + /*\n//*/ 2;", "3"));
+  assert(ev(js, "1 + /*\n//\n*/ 2;", "3"));
 }
 
 static void test_memory(void) {
@@ -322,12 +335,14 @@ static void test_funcs(void) {
   assert(ev(js, "f = function(a,b){return a + b;}; 1", "1"));
   js_gc(js);
   jsoff_t brk = js->brk;
+  assert(ev(js, "f(3, 4 )", "7"));
   assert(ev(js, "f(3,4)", "7"));
   assert(ev(js, "f(1+2,4)", "7"));
   assert(ev(js, "f(1+2,f(2,3))", "8"));
   js_gc(js);
   assert(js->brk == brk);
   assert(ev(js, "let a=0; (function(){a++;})(); a", "1"));
+  assert(ev(js, "a=0; (function(){ a++; })(); a", "1"));
 }
 
 static void test_bool(void) {
@@ -432,12 +447,12 @@ int main(void) {
   test_gc();
   test_funcs();
   test_scopes();
-  test_basic();
   test_arith();
   test_errors();
   test_memory();
   test_strings();
   test_flow();
+  test_basic();
   double ms = (double) (clock() - a) * 1000 / CLOCKS_PER_SEC;
   printf("SUCCESS. All tests passed in %g ms\n", ms);
   return EXIT_SUCCESS;
