@@ -420,7 +420,7 @@ void js_gc(struct js *js) {
 
 // Skip whitespaces and comments
 static jsoff_t skiptonext(const char *code, jsoff_t len, jsoff_t n) {
-  printf("SKIP: [%.*s]\n", len - n, &code[n]);
+  // printf("SKIP: [%.*s]\n", len - n, &code[n]);
   while (n < len) {
     if (is_space(code[n])) {
       n++;
