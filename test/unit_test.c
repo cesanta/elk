@@ -89,6 +89,9 @@ static void test_errors(void) {
   assert(ev(js, "class", "ERROR: 'class' not implemented"));
   assert(ev(js, "const x", "ERROR: 'const' not implemented"));
   assert(ev(js, "var x", "ERROR: 'var' not implemented"));
+
+  assert(ev(js, "1 + yield", "ERROR: unexpected token 'yield'"));
+  assert(ev(js, "yield", "ERROR: 'yield' not implemented"));
 }
 
 static void test_basic(void) {
@@ -182,9 +185,8 @@ static void test_memory(void) {
   struct js *js;
   assert((js = js_create(mem, sizeof(mem))) != NULL);
   assert(ev(js, "({a:1})", "ERROR: oom"));  // OOM
-  // js_set(js, js->scope, js_mkstr(js, "abcde", 5), tov(1.2345));
-  // js_set(js, js->scope, js_mkstr(js, "aa", 2), mkval(T_NULL, 0));
-  // js_dump(js);
+  assert(js_usage(js) > 0);
+  js_dump(js);
 }
 
 static void test_strings(void) {
@@ -357,6 +359,9 @@ static void test_bool(void) {
   assert(ev(js, "1 === 2", "false"));
   assert(ev(js, "1 !== 2", "true"));
   assert(ev(js, "1 === true", "ERROR: type mismatch"));
+  assert(ev(js, "1 <= 2", "true"));
+  assert(ev(js, "1 < 2", "true"));
+  assert(ev(js, "2 >= 2", "true"));
 }
 
 static void test_gc(void) {
@@ -411,6 +416,7 @@ static void test_ffi(void) {
   js_set(js, obj, "fmt", js_import(js, (uintptr_t) fmt, "sd"));
   js_set(js, obj, "op", js_import(js, (uintptr_t) op, "i[iiu]iiu"));
   js_set(js, obj, "op2", js_import(js, (uintptr_t) op2, "v[viu]u"));
+  js_set(js, js_glob(js), "eval", js_import(js, (uintptr_t) js_eval, "jmsi"));
   assert(ev(js, "os.atoi()", "ERROR: bad arg 1"));
   assert(ev(js, "os.bad1(1)", "ERROR: bad sig"));
   assert(ev(js, "os.sum1(1)", "ERROR: bad arg 2"));
@@ -428,6 +434,7 @@ static void test_ffi(void) {
   assert(ev(js, "let f = function(){return 1;}; 7;", "7"));
   assert(ev(js, "a=b=0; while(a++<1){os.sum1(1,2);b++;};b", "1"));
   assert(ev(js, "a=b=0; while(a++<1){f();f();b++;};b", "1"));
+  assert(ev(js, "eval(null, '3+4',3)", "7"));
 
   // Test that C can trigger JS callback even after GC
   assert(ev(js, "'foo'; 'bar'; 1", "1"));  // This will be GC-ed
