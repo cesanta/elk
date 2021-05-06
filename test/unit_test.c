@@ -434,7 +434,7 @@ static void test_ffi(void) {
   assert(ev(js, "let f = function(){return 1;}; 7;", "7"));
   assert(ev(js, "a=b=0; while(a++<1){os.sum1(1,2);b++;};b", "1"));
   assert(ev(js, "a=b=0; while(a++<1){f();f();b++;};b", "1"));
-  // assert(ev(js, "eval(null, '3+4',3)", "7"));
+  assert(ev(js, "eval(null, '3+4',3)", "7"));
 
   // Test that C can trigger JS callback even after GC
   assert(ev(js, "'foo'; 'bar'; 1", "1"));  // This will be GC-ed

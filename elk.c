@@ -679,7 +679,7 @@ static jsval_t js_call_params(struct js *js) {
 #define MAX_FFI_ARGS 6
 typedef uintptr_t jw_t;
 typedef jw_t (*w6w_t)(jw_t, jw_t, jw_t, jw_t, jw_t, jw_t);
-union ffi_val { void *p; w6w_t fp; jw_t w; double d; jsval_t v; };
+union ffi_val { void *p; w6w_t fp; jw_t w; double d; uint64_t u64; };
 //struct fficbparam { struct js *js; const char *decl; jsval_t jsfunc; };
 
 static jsval_t call_js(struct js *js, const char *fn, int fnlen);
@@ -778,7 +778,7 @@ static jsval_t call_c(struct js *js, const char *fn, int fnlen, jsoff_t fnoff) {
       case 'b': if (vtype(v) != T_BOOL) return js_err(js, "bad arg %d", n + 1); args[n++].w = vdata(v); break;
       case 'i': if (vtype(v) != T_NUM) return js_err(js, "bad arg %d", n + 1); args[n++].w = (long) tod(v); break;
       case 's': if (vtype(v) != T_STR) return js_err(js, "bad arg %d", n + 1); args[n++].p = js->mem + vstr(js, v, NULL); break;
-			case 'j': args[n++].v = v; break;
+			case 'j': args[n++].u64 = v; break;
 			case 'm': args[n++].p = js; break;
 			case 'u': args[n++].p = &js->mem[cbp]; break;
       default: return js_err(js, "bad sig");
@@ -795,25 +795,25 @@ static jsval_t call_c(struct js *js, const char *fn, int fnlen, jsoff_t fnoff) {
 #define __cdecl
 #endif
   switch (type) {
-    case 0: res.w = ((jw_t(__cdecl*)(jw_t,jw_t,jw_t,jw_t,jw_t,jw_t)) f)      (args[0].w, args[1].w, args[2].w, args[3].w, args[4].w, args[5].w); break;
+    case 0: res.u64 = ((uint64_t(__cdecl*)(jw_t,jw_t,jw_t,jw_t,jw_t,jw_t)) f)      (args[0].w, args[1].w, args[2].w, args[3].w, args[4].w, args[5].w); break;
     case 1: res.d = ((double(__cdecl*)(jw_t,jw_t,jw_t,jw_t,jw_t,jw_t)) f)    (args[0].w, args[1].w, args[2].w, args[3].w, args[4].w, args[5].w); break;
-    case 2: res.w = ((jw_t(__cdecl*)(double,jw_t,jw_t,jw_t,jw_t,jw_t)) f)    (args[0].d, args[1].w, args[2].w, args[3].w, args[4].w, args[5].w); break;
+    case 2: res.u64 = ((uint64_t(__cdecl*)(double,jw_t,jw_t,jw_t,jw_t,jw_t)) f)    (args[0].d, args[1].w, args[2].w, args[3].w, args[4].w, args[5].w); break;
     case 3: res.d = ((double(__cdecl*)(double,jw_t,jw_t,jw_t,jw_t,jw_t)) f)  (args[0].d, args[1].w, args[2].w, args[3].w, args[4].w, args[5].w); break;
-    case 4: res.w = ((jw_t(__cdecl*)(jw_t,double,jw_t,jw_t,jw_t,jw_t)) f)    (args[0].w, args[1].d, args[2].w, args[3].w, args[4].w, args[5].w); break;
+    case 4: res.u64 = ((uint64_t(__cdecl*)(jw_t,double,jw_t,jw_t,jw_t,jw_t)) f)    (args[0].w, args[1].d, args[2].w, args[3].w, args[4].w, args[5].w); break;
     case 5: res.d = ((double(__cdecl*)(jw_t,double,jw_t,jw_t,jw_t,jw_t)) f)  (args[0].w, args[1].d, args[2].w, args[3].w, args[4].w, args[5].w); break;
-    case 6: res.w = ((jw_t(__cdecl*)(double,double,jw_t,jw_t,jw_t,jw_t)) f)  (args[0].d, args[1].d, args[2].w, args[3].w, args[4].w, args[5].w); break;
+    case 6: res.u64 = ((uint64_t(__cdecl*)(double,double,jw_t,jw_t,jw_t,jw_t)) f)  (args[0].d, args[1].d, args[2].w, args[3].w, args[4].w, args[5].w); break;
     case 7: res.d = ((double(__cdecl*)(double,double,jw_t,jw_t,jw_t,jw_t)) f)(args[0].d, args[1].d, args[2].w, args[3].w, args[4].w, args[5].w); break;
     default: return js_err(js, "ffi");
   }
   //printf("  TYPE %d RES: %" PRIxPTR " %g %p\n", type, res.v, res.d, res.p);
   // Import return value into JS
   switch (fn[0]) {
-    case 'i': return tov((int) res.w);
+    case 'i': return tov((int) res.u64);
     case 'd': return tov(res.d);
     case 'b': return mkval(T_BOOL, res.w ? 1 : 0);
     case 's': return mkstr(js, (char *) (intptr_t) res.w, strlen((char *) (intptr_t) res.w));
     case 'v': return mkval(T_UNDEF, 0);
-    case 'j': return (jsval_t) res.w;
+    case 'j': return (jsval_t) res.u64;
   }
   // clang-format on
   return js_err(js, "bad sig");
