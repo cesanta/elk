@@ -69,12 +69,12 @@ int main(void) {
 
 - Every statement must end with a semicolon `;`
 - No `!=`, `==`. Use strict comparison `!==`, `===`
-- No `var`, no `const`. Use `let`, strict mode only
+- No `var`, no `const`. Use `let` (strict mode only)
 - No `do`, `switch`, `for`. Use `while`
 - No ternary operator `a ? b : c`
 - No arrays, closures, prototypes, `this`, `new`, `delete`
 - No standard library: no `Date`, `Regexp`, `Function`, `String`, `Number`
-- Strings are binary data chunks, not Unicode strings
+- Strings are binary data chunks, not Unicode strings: `'ы'.length === 2`
 
 ## Performance
 
