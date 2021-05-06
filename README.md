@@ -17,7 +17,7 @@ Elk features include:
 - Zero dependencies. Builds cleanly by ISO C or ISO C++ compilers
 - Easy to embed: just copy `elk.c` and `elk.h` to your source tree
 - Very small and simple embedding API
-- Allows to call C/C++ functions from JavaScript and vice versa
+- Can call native C/C++ functions from JavaScript and vice versa
 - Does not use malloc. Operates with a given memory buffer only
 - Small footprint: about 20KB on flash/disk, about 100 bytes RAM for core VM
 - No bytecode. Interprets JS code directly
@@ -65,16 +65,28 @@ int main(void) {
 }
 ```
 
-## Restrictions
+## Supported features
 
+- Operations: all standard JS operations except:
+   - `!=`, `==`. Use strict comparison `!==`, `===`
+   - No ternary operator `a ? b : c` 
+   - No computed member access `a[b]`
+- Typeof: `typeof('a') === 'string'`
+- While: `while (...) { ... }`
+- Conditional: `if (...) ... else ...`
+- Simple types: `let a, b, c = 12.3, d = 'a', e = null, f = true, g = false;` 
+- Functions: `let f = function(x, y) { return x + y; };`
+- Objects: `let obj = {f: function(x) { return x * 2}}; obj.f(3);` 
 - Every statement must end with a semicolon `;`
-- No `!=`, `==`. Use strict comparison `!==`, `===`
+- Strings are binary data chunks, not Unicode strings: `'Київ'.length === 8`
+
+## Not supported features
+
 - No `var`, no `const`. Use `let` (strict mode only)
 - No `do`, `switch`, `for`. Use `while`
-- No ternary operator `a ? b : c`, no computed member access `a[b]`
+- No `=>` functions. Use `let f = function(...) {...};`
 - No arrays, closures, prototypes, `this`, `new`, `delete`
 - No standard library: no `Date`, `Regexp`, `Function`, `String`, `Number`
-- Strings are binary data chunks, not Unicode strings: `'Київ'.length === 8`
 
 ## Performance
 
