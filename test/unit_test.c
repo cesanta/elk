@@ -221,6 +221,10 @@ static void test_strings(void) {
   assert(ev(js, "b", "\"hi\""));
   assert(ev(js, "a = b = 1", "1"));
   assert(ev(js, "'x' * 'y'", "ERROR: bad str op"));
+  assert(ev(js, "'aa'.foo", "ERROR: lookup in non-obj"));
+  assert(ev(js, "'aa'.length", "2"));
+  assert(ev(js, "'ы'.length", "2"));
+  assert(ev(js, "({a:'ы'}).a.length", "2"));
 }
 
 static void test_flow(void) {

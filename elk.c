@@ -652,9 +652,14 @@ static jsval_t do_string_op(struct js *js, uint8_t op, jsval_t l, jsval_t r) {
 }
 
 static jsval_t do_dot_op(struct js *js, jsval_t l, jsval_t r) {
+  const char *ptr = (char *) &js->code[coderefoff(r)];
   if (vtype(r) != T_CODEREF) return js_err(js, "ident expected");
+  // Handle stringvalue.length
+  if (vtype(l) == T_STR && streq(ptr, codereflen(r), "length", 6)) {
+    return tov(offtolen(loadoff(js, vdata(l))));
+  }
   if (vtype(l) != T_OBJ) return js_err(js, "lookup in non-obj");
-  jsoff_t off = lkp(js, l, js->code + coderefoff(r), codereflen(r));
+  jsoff_t off = lkp(js, l, ptr, codereflen(r));
   return off == 0 ? mkval(T_UNDEF, 0) : mkval(T_PROP, off);
 }
 
