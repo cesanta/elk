@@ -92,6 +92,9 @@ static void test_errors(void) {
 
   assert(ev(js, "1 + yield", "ERROR: unexpected token 'yield'"));
   assert(ev(js, "yield", "ERROR: 'yield' not implemented"));
+  assert(ev(js, "@", "ERROR: parse error"));
+  assert(ev(js, "$", "ERROR: '$' not found"));
+  assert(ev(js, "1?2:3", "ERROR: unknown op 130"));
 }
 
 static void test_basic(void) {
@@ -217,8 +220,7 @@ static void test_strings(void) {
   assert(ev(js, "a", "\"hi\""));
   assert(ev(js, "b", "\"hi\""));
   assert(ev(js, "a = b = 1", "1"));
-  // js_gc(js);
-  // js_dump(js);
+  assert(ev(js, "'x' * 'y'", "ERROR: bad str op"));
 }
 
 static void test_flow(void) {
@@ -449,6 +451,7 @@ static void test_ffi(void) {
 
 int main(void) {
   clock_t a = clock();
+  test_basic();
   test_ffi();
   test_bool();
   test_gc();
@@ -459,7 +462,6 @@ int main(void) {
   test_memory();
   test_strings();
   test_flow();
-  test_basic();
   double ms = (double) (clock() - a) * 1000 / CLOCKS_PER_SEC;
   printf("SUCCESS. All tests passed in %g ms\n", ms);
   return EXIT_SUCCESS;
