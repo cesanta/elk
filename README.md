@@ -71,7 +71,7 @@ int main(void) {
 - No `!=`, `==`. Use strict comparison `!==`, `===`
 - No `var`, no `const`. Use `let` (strict mode only)
 - No `do`, `switch`, `for`. Use `while`
-- No ternary operator `a ? b : c`
+- No ternary operator `a ? b : c`, no computed member access `a[b]`
 - No arrays, closures, prototypes, `this`, `new`, `delete`
 - No standard library: no `Date`, `Regexp`, `Function`, `String`, `Number`
 - Strings are binary data chunks, not Unicode strings: `'Київ'.length === 8`
