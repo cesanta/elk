@@ -74,7 +74,7 @@ int main(void) {
 - No ternary operator `a ? b : c`
 - No arrays, closures, prototypes, `this`, `new`, `delete`
 - No standard library: no `Date`, `Regexp`, `Function`, `String`, `Number`
-- Strings are binary data chunks, not Unicode strings: `'ы'.length === 2`
+- Strings are binary data chunks, not Unicode strings: `'Київ'.length === 8`
 
 ## Performance
 
