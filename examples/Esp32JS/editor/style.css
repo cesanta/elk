@@ -1,0 +1,39 @@
+html,body { height: 100%; width: 100%; }
+select,input,label::before,textarea,input:focus, .button,.btn:focus,.btn:active:focus,.btn.active:focus, .btn.focus,.btn:active.focus,.btn.active.focus {
+  outline: none !important;
+	box-shadow: none !important;
+}
+select, input, label::before, textarea {
+  outline: none; box-shadow:none !important; 
+  border: 1px solid #ccc !important; 
+}
+.xfa {width: 0.75em !important;}
+.noselect { user-select: none; }
+.dropdown-item { cursor: pointer; }
+.bg-lavender { background-color: #e6e6fa; }
+.vh-100 { height: 100vh; }
+
+
+.CodeMirror {
+  font-size: 14px;
+  font-family: Menlo, Consolas, monospace;
+  border-radius: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: auto !important;
+}
+.CodeMirror-selected { background: #ccc !important; }
+.CodeMirror pre { background: transparent !important; }
+
+
+[tooltip] { position: relative; }
+[tooltip]::before {
+  content: attr(tooltip); text-align: center;
+        display: inline-block; position: absolute; top: 50%; right: -4em;
+  background: #333; color: #FFF; padding: 5px; border-radius: 5px;
+  opacity:0; transition:0.3s; z-index: 99999; padding: 0.2em 0.8em;
+  pointer-events: none; white-space: normal; width: 10em;
+}
+[tooltip]:hover::before { opacity:1; top: 137%; }
