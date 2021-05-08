@@ -188,13 +188,13 @@ Return imported function, suitable for subsequent `js_set()`.
 - `signature`: specifies C function signature that tells how JS engine
    should marshal JS arguments to the C function.
 	 First letter specifies return value type, following letters - parameters:
-   - `b`: C `bool` type
-   - `d`: C `double` type
-   - `i`: C integer type: `char`, `short`, `int`, `long`
-   - `s`: C string, a 0-terminated `char *`
-   - `j`: marshals `jsval_t`
-   - `m`: marshals current `struct js *`. In JS, pass `null`
-   - `p`: marshals C pointer
+   - `b`: a C `bool` type
+   - `d`: a C `double` type
+   - `i`: a C integer type: `char`, `short`, `int`, `long`
+   - `s`: a C string, a 0-terminated `char *`
+   - `j`: a `jsval_t`
+   - `m`: a current `struct js *`. In JS, pass `null`
+   - `p`: any C pointer
    - `v`: valid only for the return value, means `void`
 
 The imported C function must satisfy the following requirements:

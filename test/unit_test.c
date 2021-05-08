@@ -99,7 +99,7 @@ static void test_errors(void) {
 
 static void test_basic(void) {
   struct js *js;
-  char mem[sizeof(*js) + 200];
+  char mem[sizeof(*js) + 300];
   assert((js = js_create(mem, sizeof(mem))) != NULL);
   assert(ev(js, "null", "null"));
   assert(ev(js, "null", "null"));
@@ -181,6 +181,8 @@ static void test_basic(void) {
   assert(ev(js, "1 + /* ///**/ 2;", "3"));
   assert(ev(js, "1 + /*\n//*/ 2;", "3"));
   assert(ev(js, "1 + /*\n//\n*/ 2;", "3"));
+
+  assert(ev(js, "b = 2; a = {x:1,y:b};", "{\"y\":2,\"x\":1}"));
 }
 
 static void test_memory(void) {
@@ -225,6 +227,10 @@ static void test_strings(void) {
   assert(ev(js, "'aa'.length", "2"));
   assert(ev(js, "'Київ'.length", "8"));
   assert(ev(js, "({a:'ї'}).a.length", "2"));
+  assert(ev(js, "a=true;a", "true"));
+  assert(ev(js, "a=!a;a", "false"));
+  assert(ev(js, "!123", "false"));
+  assert(ev(js, "!0", "true"));
 }
 
 static void test_flow(void) {
@@ -303,7 +309,7 @@ static void test_scopes(void) {
 
 static void test_funcs(void) {
   struct js *js;
-  char mem[sizeof(*js) + 200];
+  char mem[sizeof(*js) + 500];
   assert((js = js_create(mem, sizeof(mem))) != NULL);
   assert(ev(js, "function(){};1;", "1"));
   assert(ev(js, "let f=function(){};1;", "1"));
@@ -351,6 +357,17 @@ static void test_funcs(void) {
   assert(js->brk == brk);
   assert(ev(js, "let a=0; (function(){a++;})(); a", "1"));
   assert(ev(js, "a=0; (function(){ a++; })(); a", "1"));
+
+  assert(ev(js, "a=0; (function(x){a=x;})(2); a", "2"));
+  assert(ev(js, "a=0; (function(x){a=x;})('hi'); a", "\"hi\""));
+  assert(ev(js, "a=0;(function(x){let z=x;a=typeof z})('hi');a", "\"string\""));
+  assert(ev(js, "(function(x){return x;})(1);", "1"));
+  assert(ev(js, "(function(x){return {a:x};null;})(1).a;", "1"));
+  assert(ev(js, "(function(x){let m= {a:7}; return m;})(1).a;", "7"));
+  assert(ev(js, "(function(x){let m=7;return m;})(1);", "7"));
+  assert(ev(js, "(function(x){let m='hi';return m;})(1);", "\"hi\""));
+  assert(ev(js, "(function(x){let m={a:2};return m;})(1).a;", "2"));
+  assert(ev(js, "(function(x){let m={a:x};return m;})(3).a;", "3"));
 }
 
 static void test_bool(void) {
@@ -384,6 +401,7 @@ static void test_gc(void) {
 }
 
 static int sum1(int a, int b) {
+  // printf("SUM1 %d %d\n", a, b);
   return a + b;
 }
 static double sum2(double a, double b) {
@@ -397,7 +415,16 @@ static const char *fmt(double d) {
   snprintf(buf, sizeof(buf), "n->%g", d);
   return buf;
 }
+static int s_intvar = 0;
+static void *ptr1(void) {
+  // printf("PTR1 %p\n", &s_intvar);
+  return &s_intvar;
+}
+static int ptr2(int *p) {
+  return (*p)++;
+}
 static int op(int (*fp)(int, void *), int a, int b, void *userdata) {
+  // printf("OP fp %p a %d b %d ud %p\n", fp, a, b, userdata);
   return fp(a + b, userdata);
 }
 // Simulate timer callback. Save callback address & param and call later
@@ -422,7 +449,11 @@ static void test_ffi(void) {
   js_set(js, obj, "fmt", js_import(js, (uintptr_t) fmt, "sd"));
   js_set(js, obj, "op", js_import(js, (uintptr_t) op, "i[iiu]iiu"));
   js_set(js, obj, "op2", js_import(js, (uintptr_t) op2, "v[viu]u"));
+  js_set(js, obj, "p1", js_import(js, (uintptr_t) ptr1, "p"));
+  js_set(js, obj, "p2", js_import(js, (uintptr_t) ptr2, "ip"));
+  js_set(js, obj, "delete", js_import(js, (uintptr_t) sum1, "iii"));
   js_set(js, js_glob(js), "eval", js_import(js, (uintptr_t) js_eval, "jmsi"));
+  js_set(js, js_glob(js), "str", js_import(js, (uintptr_t) js_str, "smj"));
   assert(ev(js, "os.atoi()", "ERROR: bad arg 1"));
   assert(ev(js, "os.bad1(1)", "ERROR: bad sig"));
   assert(ev(js, "os.sum1(1)", "ERROR: bad arg 2"));
@@ -441,6 +472,16 @@ static void test_ffi(void) {
   assert(ev(js, "a=b=0; while(a++<1){os.sum1(1,2);b++;};b", "1"));
   assert(ev(js, "a=b=0; while(a++<1){f();f();b++;};b", "1"));
   assert(ev(js, "eval(null, '3+4',3)", "7"));
+  assert(ev(js, "str(null, 123)", "\"123\""));
+
+  // Test that ffi-ed callback can call ffi-ed functions
+  assert(ev(js, "os.op(function(x){return os.sum1(x,1);},2,3,null)", "6"));
+  assert(ev(js, "os.op(function(x){return os.sum1(x,os.sum1(1,2));},2,3,null)",
+            "8"));
+
+  assert(ev(js, "os.p2(os.p1())", "0"));
+  assert(ev(js, "os.p2(os.p1())", "1"));
+  assert(ev(js, "os.delete(1,2)", "3"));
 
   // Test that C can trigger JS callback even after GC
   assert(ev(js, "'foo'; 'bar'; 1", "1"));  // This will be GC-ed
@@ -459,13 +500,13 @@ int main(void) {
   test_ffi();
   test_bool();
   test_gc();
-  test_funcs();
   test_scopes();
   test_arith();
   test_errors();
   test_memory();
   test_strings();
   test_flow();
+  test_funcs();
   double ms = (double) (clock() - a) * 1000 / CLOCKS_PER_SEC;
   printf("SUCCESS. All tests passed in %g ms\n", ms);
   return EXIT_SUCCESS;
