@@ -27,6 +27,32 @@ Below is a demonstration on a classic Arduino Nano board which has
 
 ![Elk on Arduino Nano](test/nano.gif)
 
+
+## JavaScript on ESP32
+
+The [Esp32JS](examples/Esp32JS) Arduino sketch is an example of Elk integration
+with ESP32. Flash this sketch on your ESP32 board, go to http://elk-js.com,
+and get a JavaScript development environment instantly! Reloading your script
+takes a fraction of a second - compare that with a regular reflashing..
+Here how it looks like:
+
+![](test/editor.png)
+
+The example JS firmware implements:
+- Blinks an LED periodically
+- Connects to the [HiveMQ](http://www.hivemq.com/demos/websocket-client/)
+  MQTT server
+- Subscribes to the `elk/rx` topic
+- When an MQTT message is received, sends some stats to the `elk/tx` topic:
+
+
+That's screenshot is taken from the MQTT server which shows that we sent
+a `hello JS!` message and received stats in response:
+
+![](test/mqtt.png)
+
+
+
 ## Call JavaScript from C
 ```c
 #include <stdio.h>
