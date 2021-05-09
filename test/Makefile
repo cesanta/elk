@@ -17,7 +17,7 @@ endef
 all: test test++ vc2017 linux mingw cli
 
 test:
-	$(call build,,$(CC),$(CFLAGS) -o ut,./ut)
+	$(call build,,$(CC),$(CFLAGS) -o ut,$(RUNNER) ./ut)
 
 test++:
 	$(call build,,$(CXX),$(CFLAGS) -Wno-deprecated -o ut,./ut)

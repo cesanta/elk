@@ -1,10 +1,5 @@
 #define JS_DUMP
 #include "../elk.c"
-
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <time.h>
 
 static bool ev(struct js *js, const char *expr, const char *expectation) {
@@ -191,7 +186,7 @@ static void test_memory(void) {
   assert((js = js_create(mem, sizeof(mem))) != NULL);
   assert(ev(js, "({a:1})", "ERROR: oom"));  // OOM
   assert(js_usage(js) > 0);
-  js_dump(js);
+  // js_dump(js);
 }
 
 static void test_strings(void) {
@@ -438,6 +433,7 @@ static void op2(void (*fp)(int, void *), void *userdata) {
 static void test_ffi(void) {
   struct js *js;
   char mem[sizeof(*js) + 1500];
+
   assert((js = js_create(mem, sizeof(mem))) != NULL);
   jsval_t obj = js_mkobj(js);
   js_set(js, js_glob(js), "os", obj);
@@ -482,22 +478,43 @@ static void test_ffi(void) {
   assert(ev(js, "os.p2(os.p1())", "0"));
   assert(ev(js, "os.p2(os.p1())", "1"));
   assert(ev(js, "os.delete(1,2)", "3"));
+  jsoff_t brk;
+
+  js_gc(js);
+  brk = js->brk;
+  assert(ev(js, "os.sum1(2,1)", "3"));
+  js_gc(js);
+  assert(js->brk == brk);
 
   // Test that C can trigger JS callback even after GC
-  assert(ev(js, "'foo'; 'bar'; 1", "1"));  // This will be GC-ed
-  assert(ev(js, "a=0; os.op2(function(x){a=x;},null); 1", "1"));
-  jsoff_t brk = js->brk;
+
+  // "os.op2(function(x){ let g ={ f:x, b:'aa'}; "
+  // "os.op2(function(x){ let g = {foo: 1234}; "
+  assert(ev(js,
+            "os.op2(function(x){ "
+            " let g = 'axds', h= 'sadlkasd', foo = {f:x}; "
+            " a = foo.f; }, null); 1",
+            "1"));
   assert(ev(js, "", "undefined"));  // Trigger GC
-  assert(js->brk < brk);            // Make sure we've deleted some stuff
+  brk = js->brk;
   assert(s_op2fp != NULL);
   s_op2fp(992, s_op2fp_param);
   assert(ev(js, "a", "992"));
+  js_gc(js);
+  assert(js->brk == brk);
+  s_op2fp(123, s_op2fp_param);
+  // js_dump(js);
+  s_op2fp(234, s_op2fp_param);
+  js_gc(js);
+  s_op2fp(334, s_op2fp_param);
+  assert(ev(js, "a", "334"));
+  js_gc(js);
+  assert(js->brk == brk);
 }
 
 int main(void) {
   clock_t a = clock();
   test_basic();
-  test_ffi();
   test_bool();
   test_gc();
   test_scopes();
@@ -507,6 +524,7 @@ int main(void) {
   test_strings();
   test_flow();
   test_funcs();
+  test_ffi();
   double ms = (double) (clock() - a) * 1000 / CLOCKS_PER_SEC;
   printf("SUCCESS. All tests passed in %g ms\n", ms);
   return EXIT_SUCCESS;

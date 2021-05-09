@@ -14,6 +14,7 @@
 // Alternatively, you can license this software under a commercial
 // license, please contact us at https://cesanta.com/contact.html
 
+#include <assert.h>
 #include <inttypes.h>
 #include <math.h>
 #include <stdarg.h>
@@ -28,10 +29,6 @@
 #define JS_EXPR_MAX 20
 #endif
 
-#ifndef JS_GC_THRESHOLD
-#define JS_GC_THRESHOLD 80
-#endif
-
 #if defined(ARDUINO_AVR_NANO) || defined(ARDUINO_AVR_PRO) || \
     defined(ARDUINO_AVR_UNO)
 #define JS_NOCB
@@ -41,9 +38,10 @@ typedef uint32_t jsoff_t;
 
 struct js {
   const char *code;  // Currently parsed code snippet
-  char errmsg[38];   // Error message placeholder
+  char errmsg[36];   // Error message placeholder
   uint8_t tok;       // Last parsed token value
   uint8_t flags;     // Execution flags, see F_* enum below
+  uint16_t lev;      // Recursion level
   jsoff_t clen;      // Code snippet length
   jsoff_t pos;       // Current parsing position
   jsoff_t toff;      // Offset of the last parsed token
@@ -172,7 +170,7 @@ static bool is_right_assoc(uint8_t tok) { return (tok >= TOK_NOT && tok <= TOK_U
 static bool is_assign(uint8_t tok) { return (tok >= TOK_ASSIGN && tok <= TOK_OR_ASSIGN); }
 static void saveoff(struct js *js, jsoff_t off, jsoff_t val) { memcpy(&js->mem[off], &val, sizeof(val)); }
 static void saveval(struct js *js, jsoff_t off, jsval_t val) { memcpy(&js->mem[off], &val, sizeof(val)); }
-static jsoff_t loadoff(struct js *js, jsoff_t off) { jsoff_t v = 0; memcpy(&v, &js->mem[off], sizeof(v)); return v; }
+static jsoff_t loadoff(struct js *js, jsoff_t off) { jsoff_t v = 0; assert(js->brk <= js->size); memcpy(&v, &js->mem[off], sizeof(v)); return v; }
 static jsoff_t offtolen(jsoff_t off) { return (off >> 2) - 1; }
 static jsval_t loadval(struct js *js, jsoff_t off) { jsval_t v = 0; memcpy(&v, &js->mem[off], sizeof(v)); return v; }
 static jsval_t upper(struct js *js, jsval_t scope) { return mkval(T_OBJ, loadoff(js, vdata(scope) + sizeof(jsoff_t))); }
@@ -360,6 +358,9 @@ static void js_fixup_offsets(struct js *js, jsoff_t start, jsoff_t size) {
     if (o1 > start) saveoff(js, base, o1 - size);
     if (o2 > start) saveoff(js, base + sizeof(jsoff_t), o2 - size);
   }
+  // Fixup js->scope
+  jsoff_t off = vdata(js->scope);
+  if (off > start) js->scope = mkval(T_OBJ, off - size);
 }
 
 static void js_delete_marked_entities(struct js *js) {
@@ -416,6 +417,7 @@ static void js_unmark_used_entities(struct js *js) {
 }
 
 void js_gc(struct js *js) {
+  // printf("GC RUN\n");
   js_mark_all_entities_for_deletion(js);
   js_unmark_used_entities(js);
   js_delete_marked_entities(js);
@@ -559,20 +561,17 @@ static void sortops(uint8_t *ops, int nops, jsval_t *stk) {
 }
 
 static void mkscope(struct js *js) {
-  js->scope = mkobj(js, vdata(js->scope));
-  // printf("NEW SCOPE %lu\n", vdata(js->scope));
+  jsoff_t prev = vdata(js->scope);
+  js->scope = mkobj(js, prev);
+  // printf("ENTER SCOPE %u, prev %u\n", (jsoff_t) vdata(js->scope), prev);
 }
 
 static void delscope(struct js *js) {
-  // printf("EXIT SCOPE %lu\n", vdata(js->scope));
   js->scope = upper(js, js->scope);
+  // printf("EXIT  SCOPE %u\n", (jsoff_t) vdata(js->scope));
 }
 
 static jsval_t js_block(struct js *js, bool create_scope) {
-  // If we're low on runtime memory, run GC
-  // jsoff_t pos = js->pos;
-  // printf("BLOCK %d %d\n", js->flags, create_scope);
-  if (js->brk > js->size * JS_GC_THRESHOLD / 100) js_gc(js);
   jsval_t res = mkval(T_UNDEF, 0);
   jsoff_t brk1 = js->brk;
   if (create_scope) mkscope(js);  // Enter new scope
@@ -1229,6 +1228,9 @@ static jsval_t js_return(struct js *js) {
 }
 
 static jsval_t js_stmt(struct js *js, uint8_t etok) {
+  jsval_t res;
+  if (js->lev == 0) js_gc(js);  // Before top-level stmt, garbage collect
+  js->lev++;
   // clang-format off
   switch (next(js)) {
     case TOK_CASE: case TOK_CATCH: case TOK_CLASS: case TOK_CONST:
@@ -1236,19 +1238,23 @@ static jsval_t js_stmt(struct js *js, uint8_t etok) {
     case TOK_FOR: case TOK_IN: case TOK_INSTANCEOF: case TOK_NEW:
     case TOK_SWITCH: case  TOK_THIS: case TOK_THROW: case TOK_TRY:
     case TOK_VAR: case TOK_VOID: case TOK_WITH: case TOK_YIELD:
-      return js_err(js, "'%.*s' not implemented", (int) js->tlen, js->code + js->toff);
-    case TOK_CONTINUE:  return js_continue(js);
-    case TOK_BREAK:     return js_break(js);
-    case TOK_LET:       return js_let(js);
-    case TOK_IF:        return js_if(js);
-    case TOK_LBRACE:    return js_block(js, true);
-    case TOK_WHILE:     return js_while(js);
-    case TOK_RETURN:    return js_return(js);
+      res = js_err(js, "'%.*s' not implemented", (int) js->tlen, js->code + js->toff);
+      break;
+    case TOK_CONTINUE:  res = js_continue(js); break;
+    case TOK_BREAK:     res = js_break(js); break;
+    case TOK_LET:       res = js_let(js); break;
+    case TOK_IF:        res = js_if(js); break;
+    case TOK_LBRACE:    res = js_block(js, true); break;
+    case TOK_WHILE:     res = js_while(js); break;
+    case TOK_RETURN:    res = js_return(js); break;
     default:
       js->pos -= js->tlen; // Unparse last parsed token
-      return resolveprop(js, js_expr(js, etok, TOK_SEMICOLON));
+      res = resolveprop(js, js_expr(js, etok, TOK_SEMICOLON));
+      break;
   }
   //clang-format on
+  js->lev--;
+  return res;
 }
 // clang-format on
 

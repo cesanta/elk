@@ -135,16 +135,15 @@ Available preprocessor definitions:
 | ------------ | --------- | ----------- |
 |`JS_EXPR_MAX` | 20        | Maximum tokens in expression. Expression evaluation function declares an on-stack array `jsval_t stk[JS_EXPR_MAX];`. Increase to allow very long expressions. Reduce to save C stack space. |
 |`JS_DUMP`     | undefined | Define to enable `js_dump(struct js *)` function which prints JS memory internals to stdout |
-|`JS_GC_THRESHOLD` | 80 | A percentage (from 0 to 100) of runtime memory when a garbage collection (GC) is triggered. A trigger point is a beginning of statement block (function body, loop body, etc) |
 
 Note: on ESP32 or ESP8266, compiled functions go into the `.text` ELF
 section and subsequently into the IRAM MCU memory. It is possible to save
 IRAM space by copying Elk code into the irom section before linking.
-First, compile the object file, then rename `.text` section, e.g. for ESP8266:
+First, compile the object file, then rename `.text` section, e.g. for ESP32:
 
 ```sh
-$ xtensa-lx106-elf-gcc ... elk.c -c tmp
-$ xtensa-lx106-elf-objcopy --rename-section .text=.irom0.text tmp elk.a
+$ xtensa-esp32-elf-gcc $CFLAGS elk.c -c elk.tmp
+$ xtensa-esp32-elf-objcopy --rename-section .text=.irom0.text elk.tmp elk.o
 ```
 
 ## API reference
@@ -179,7 +178,8 @@ strings, functions, etc, are copied to the runtime.
 
 Important note: the returned result is valid only before the next call to
 `js_eval()`. The reason is that `js_eval()` triggers a garbage collection.
-A garbage collection is mark-and-sweep.
+A garbage collection is mark-and-sweep, run before every top-level statement
+gets executed.
 
 The runtime footprint is as follows:
 - An empty object is 8 bytes
@@ -311,8 +311,6 @@ int js_usage(struct js *);
 ```
 
 Return memory usage percentage - a number between 0 and 100.
-See `JS_GC_THRESHOLD` build time option. Note: you could trigger garbage
-collection by evaluating an empty expression: `js_eval(js, "", 0)`.
 
 
 ## LICENSE
