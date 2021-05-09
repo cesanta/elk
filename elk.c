@@ -14,6 +14,12 @@
 // Alternatively, you can license this software under a commercial
 // license, please contact us at https://cesanta.com/contact.html
 
+#if defined(ARDUINO_AVR_NANO) || defined(ARDUINO_AVR_PRO) || \
+    defined(ARDUINO_AVR_UNO)
+#define JS_NOCB
+#define NDEBUG
+#endif
+
 #include <assert.h>
 #include <inttypes.h>
 #include <math.h>
@@ -27,11 +33,6 @@
 
 #ifndef JS_EXPR_MAX
 #define JS_EXPR_MAX 20
-#endif
-
-#if defined(ARDUINO_AVR_NANO) || defined(ARDUINO_AVR_PRO) || \
-    defined(ARDUINO_AVR_UNO)
-#define JS_NOCB
 #endif
 
 typedef uint32_t jsoff_t;
@@ -172,6 +173,7 @@ static void saveoff(struct js *js, jsoff_t off, jsoff_t val) { memcpy(&js->mem[o
 static void saveval(struct js *js, jsoff_t off, jsval_t val) { memcpy(&js->mem[off], &val, sizeof(val)); }
 static jsoff_t loadoff(struct js *js, jsoff_t off) { jsoff_t v = 0; assert(js->brk <= js->size); memcpy(&v, &js->mem[off], sizeof(v)); return v; }
 static jsoff_t offtolen(jsoff_t off) { return (off >> 2) - 1; }
+static jsoff_t vstrlen(struct js *js, jsval_t v) { return offtolen(loadoff(js, vdata(v))); }
 static jsval_t loadval(struct js *js, jsoff_t off) { jsval_t v = 0; memcpy(&v, &js->mem[off], sizeof(v)); return v; }
 static jsval_t upper(struct js *js, jsval_t scope) { return mkval(T_OBJ, loadoff(js, vdata(scope) + sizeof(jsoff_t))); }
 static jsoff_t align32(jsoff_t v) { return ((v + 3) >> 2) << 2; }
@@ -247,13 +249,13 @@ static size_t tostr(struct js *js, jsval_t value, char *buf, size_t len) {
   // clang-format off
   switch (vtype(value)) {
     case T_UNDEF: return snprintf(buf, len, "%s", "undefined");
-    case T_NULL: return snprintf(buf, len, "%s", "null");
-    case T_BOOL: return snprintf(buf, len, "%s", vdata(value) & 1 ? "true" : "false");
-    case T_OBJ: return strobj(js, value, buf, len);
-    case T_STR: return strstring(js, value, buf, len);
-    case T_NUM: return strnum(value, buf, len);
-    case T_FUNC: return strfunc(js, value, buf, len);
-    default: return snprintf(buf, len, "VTYPE%d", vtype(value));
+    case T_NULL:  return snprintf(buf, len, "%s", "null");
+    case T_BOOL:  return snprintf(buf, len, "%s", vdata(value) & 1 ? "true" : "false");
+    case T_OBJ:   return strobj(js, value, buf, len);
+    case T_STR:   return strstring(js, value, buf, len);
+    case T_NUM:   return strnum(value, buf, len);
+    case T_FUNC:  return strfunc(js, value, buf, len);
+    default:      return snprintf(buf, len, "VTYPE%d", vtype(value));
   }
   // clang-format on
 }
@@ -270,14 +272,10 @@ const char *js_str(struct js *js, jsval_t value) {
   return buf;
 }
 
-static jsoff_t js_strlen(struct js *js, jsval_t v) {
-  return offtolen(loadoff(js, vdata(v)));
-}
-
 static bool js_truthy(struct js *js, jsval_t v) {
   uint8_t t = vtype(v);
   return (t == T_BOOL && vdata(v) != 0) || (t == T_NUM && tod(v) != 0.0) ||
-         (t == T_OBJ || t == T_FUNC) || (t == T_STR && js_strlen(js, v) > 0);
+         (t == T_OBJ || t == T_FUNC) || (t == T_STR && vstrlen(js, v) > 0);
 }
 
 static jsoff_t js_alloc(struct js *js, size_t size) {
@@ -325,12 +323,12 @@ static jsval_t setprop(struct js *js, jsval_t obj, jsval_t k, jsval_t v) {
 static inline jsoff_t esize(jsoff_t w) {
   // clang-format off
   switch (w & 3) {
-    case T_OBJ: return sizeof(jsoff_t) + sizeof(jsoff_t);
-    case T_PROP: return sizeof(jsoff_t) + sizeof(jsoff_t) + sizeof(jsval_t);
-    case T_STR: return sizeof(jsoff_t) + align32(w >> 2);
+    case T_OBJ:   return sizeof(jsoff_t) + sizeof(jsoff_t);
+    case T_PROP:  return sizeof(jsoff_t) + sizeof(jsoff_t) + sizeof(jsval_t);
+    case T_STR:   return sizeof(jsoff_t) + align32(w >> 2);
+    default:      return (jsoff_t) ~0;
   }
   // clang-format on
-  return ~0;
 }
 
 static bool is_mem_entity(uint8_t t) {
