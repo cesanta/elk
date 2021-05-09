@@ -186,7 +186,6 @@ static void test_memory(void) {
   assert((js = js_create(mem, sizeof(mem))) != NULL);
   assert(ev(js, "({a:1})", "ERROR: oom"));  // OOM
   assert(js_usage(js) > 0);
-  // js_dump(js);
 }
 
 static void test_strings(void) {
@@ -498,6 +497,8 @@ static void test_ffi(void) {
   assert(ev(js, "f('123')", "123"));
   assert(ev(js, "let s = '1'; f(s);", "1"));
   assert(ev(js, "s='1+2'; f(s);", "3"));
+  assert(ev(js, "f('3');", "3"));
+  assert(ev(js, "f('os.sum1(1,2)');", "3"));
 
   // Test that C can trigger JS callback even after GC
   assert(ev(js,
