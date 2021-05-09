@@ -486,10 +486,20 @@ static void test_ffi(void) {
   js_gc(js);
   assert(js->brk == brk);
 
-  // Test that C can trigger JS callback even after GC
+  assert(ev(js, "eval(null, '', 0)", "undefined"));
+  assert(ev(js, "eval(null, '1+2', 3)", "3"));
+  assert(ev(js, "eval(null, '1+2*3', 5)", "7"));
+  assert(ev(js, "eval(null, '({})', 4)", "{}"));
+  assert(ev(js, "eval(null, '\"x\"', 3)", "\"x\""));
+  assert(ev(js, "eval(null, '({a:1})', 7)", "{\"a\":1}"));
+  assert(ev(js, "eval(null, '({a:5,b:{c:7}}).b.c', 19)", "7"));
 
-  // "os.op2(function(x){ let g ={ f:x, b:'aa'}; "
-  // "os.op2(function(x){ let g = {foo: 1234}; "
+  assert(ev(js, "f=function(x){return eval(null,x,x.length);};1", "1"));
+  assert(ev(js, "f('123')", "123"));
+  assert(ev(js, "let s = '1'; f(s);", "1"));
+  assert(ev(js, "s='1+2'; f(s);", "3"));
+
+  // Test that C can trigger JS callback even after GC
   assert(ev(js,
             "os.op2(function(x){ "
             " let g = 'axds', h= 'sadlkasd', foo = {f:x}; "

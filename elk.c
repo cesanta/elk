@@ -605,7 +605,8 @@ static jsval_t js_eval_nogc(struct js *js, const char *buf, jsoff_t len) {
 
 static jsval_t resolveprop(struct js *js, jsval_t v) {
   if (vtype(v) != T_PROP) return v;
-  return loadval(js, vdata(v) + sizeof(jsoff_t) + sizeof(jsoff_t));
+  v = loadval(js, vdata(v) + sizeof(jsoff_t) + sizeof(jsoff_t));
+  return resolveprop(js, v);
 }
 
 static jsval_t assign(struct js *js, jsval_t lhs, jsval_t val) {
@@ -1294,7 +1295,7 @@ jsval_t js_import(struct js *js, uintptr_t fn, const char *signature) {
 }
 
 jsval_t js_eval(struct js *js, const char *buf, size_t len) {
-  js_gc(js);
+  // printf("EVAL: [%.*s]\n", (int) len, buf);
   if (len == (size_t) ~0) len = strlen(buf);
   return js_eval_nogc(js, buf, (jsoff_t) len);
 }
