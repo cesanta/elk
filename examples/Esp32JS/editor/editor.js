@@ -56,15 +56,20 @@ const InfoPanel = function(props) {
           <li>timer.create(milli, func, null) - create timer</li>
           <li>timer.delete(timerID) - delete timer</li>
           <li>mqtt.connect(url) - MQTT connect</li>
-          <li>mqtt.disconnect(url) - MQTT disconnect</li>
+          <li>mqtt.disconnect(conn) - MQTT disconnect</li>
           <li>mqtt.publish(conn, topic, msg) - publish</li>
           <li>mqtt.subscribe(conn, topic) - subscribe</li>
-          <li>mqtt.setfn(conn, func) - set MQTT handler</li>
+          <li>mqtt.setfn(func,null) - set MQTT handler</li>
           <li>str(val) - stringify JS value</li>
-          <li>log(stringval) - log a message</li>
           <li>usage() - JS mem usage in %</li>
           <li>ram() - current free RAM in bytes</li>
+          <li>log(strval) - log a message</li>
+          <li>eval(strval) - execute code</li>
         </ul>
+
+        <p>
+          Refer to <a href="https://github.com/cesanta/elk/blob/master/examples/Esp32JS/JS.h">JS.h</a> for implementation details.
+        </p>
       </div>
     </${Panel}>
   `;
