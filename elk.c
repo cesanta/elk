@@ -205,7 +205,7 @@ static size_t strobj(struct js *js, jsval_t obj, char *buf, size_t len) {
 // Stringify numeric JS value
 static size_t strnum(jsval_t value, char *buf, size_t len) {
   double dv = tod(value), iv;
-  const char *fmt = modf(dv, &iv) == 0.0 ? "%.14g" : "%g";
+  const char *fmt = modf(dv, &iv) == 0.0 ? "%.17g" : "%g";
   return snprintf(buf, len, fmt, dv);
 }
 
@@ -1144,18 +1144,18 @@ static jsval_t js_let(struct js *js) {
     uint8_t tok = nexttok(js);
     if (tok != TOK_IDENTIFIER) return js_err(js, "parse error");
     jsoff_t noff = js->toff, nlen = js->tlen;
-    if ((tok = nexttok(js)) == TOK_SEMICOLON || tok == TOK_EOF) break;
-    if (tok != TOK_ASSIGN) return js_err(js, "parse error");
-    jsval_t res = js_expr(js, TOK_COMMA, TOK_SEMICOLON);
-    if (is_err(res)) break;  // Propagate error if any
-    // printf("LET [%.*s] scope %lu\n", (int) nlen, js->code + noff,
-    // vdata(js->scope));
+    char *name = (char *) &js->code[noff];
+    jsval_t v = mkval(T_UNDEF, 0);
+    nexttok(js);
+    if (js->tok == TOK_ASSIGN) {
+      v = js_expr(js, TOK_COMMA, TOK_SEMICOLON);
+      if (is_err(v)) break;  // Propagate error if any
+    }
     if (exe) {
-      if (lkp(js, js->scope, js->code + noff, nlen) > 0)
-        return js_err(js, "'%.*s' already declared", (int) nlen,
-                      js->code + noff);
-      jsval_t x = setprop(js, js->scope, mkstr(js, js->code + noff, nlen),
-                          resolveprop(js, res));
+      if (lkp(js, js->scope, name, nlen) > 0)
+        return js_err(js, "'%.*s' already declared", (int) nlen, name);
+      jsval_t x =
+          setprop(js, js->scope, mkstr(js, name, nlen), resolveprop(js, v));
       if (is_err(x)) return x;
     }
     if (js->tok == TOK_SEMICOLON || js->tok == TOK_EOF) break;  // Stop
@@ -1165,9 +1165,13 @@ static jsval_t js_let(struct js *js) {
 }
 
 static jsval_t js_block_or_stmt(struct js *js) {
-  if (nexttok(js) == TOK_LBRACE) return js_block(js, !(js->flags & F_NOEXEC));
-  js->pos -= js->tlen;  // Unparse last parsed token
-  return resolveprop(js, js_stmt(js, TOK_SEMICOLON));
+  js->pos = skiptonext(js->code, js->clen, js->pos);
+  if (js->pos < js->clen && js->code[js->pos] == '{') {
+    js->pos++;
+    return js_block(js, !(js->flags & F_NOEXEC));
+  } else {
+    return resolveprop(js, js_stmt(js, TOK_SEMICOLON));
+  }
 }
 
 static jsval_t js_if(struct js *js) {
@@ -1190,21 +1194,19 @@ static jsval_t js_if(struct js *js) {
 }
 
 static jsval_t js_while(struct js *js) {
+  jsoff_t pos = js->pos - js->tlen;  // The beginning of `while` stmt
   if (nexttok(js) != TOK_LPAREN) return js_err(js, "parse error");
-  jsoff_t pos_cond = js->pos;
-  for (;;) {
-    jsval_t cond = js_expr(js, TOK_RPAREN, TOK_EOF);
-    if (js->tok != TOK_RPAREN) return js_err(js, "parse error");
-    uint8_t saved = js->flags;
-    bool cond_true = js_truthy(js, cond);
-    js->flags |= F_LOOP | (cond_true ? 0 : F_NOEXEC);
-    jsval_t res = js_block_or_stmt(js);
-    // printf("WHILE 2 %d %d\n", cond_true, js->flags);
-    bool stop = is_err(res) || !cond_true || (js->flags & F_BREAK);
-    js->flags = saved;
-    if (stop) break;
-    js->pos = pos_cond;
-  }
+  jsval_t cond = js_expr(js, TOK_RPAREN, TOK_EOF);
+  if (js->tok != TOK_RPAREN) return js_err(js, "parse error");
+  uint8_t flags = js->flags, exe = !(js->flags & F_NOEXEC);
+  bool cond_true = js_truthy(js, cond);
+  if (exe) js->flags |= F_LOOP | (cond_true ? 0 : F_NOEXEC);
+  jsval_t res = js_block_or_stmt(js);
+  // printf("WHILE 2 %d %d\n", cond_true, js->flags);
+  bool repeat = exe && !is_err(res) && cond_true && !(js->flags & F_BREAK);
+  js->flags = flags;          // Restore flags
+  if (repeat) js->pos = pos;  // Must loop. Jump back!
+  // printf("WHILE %d\n", js_usage(js));
   return mkval(T_UNDEF, 0);
 }
 

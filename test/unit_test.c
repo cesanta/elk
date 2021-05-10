@@ -94,7 +94,7 @@ static void test_errors(void) {
 
 static void test_basic(void) {
   struct js *js;
-  char mem[sizeof(*js) + 300];
+  char mem[sizeof(*js) + 250];
   assert((js = js_create(mem, sizeof(mem))) != NULL);
   assert(ev(js, "null", "null"));
   assert(ev(js, "null", "null"));
@@ -110,10 +110,9 @@ static void test_basic(void) {
   assert(ev(js, "1;2", "2"));
   assert(ev(js, "1;2;", "2"));
   assert(ev(js, "let a ;", "undefined"));
-  assert(ev(js, "let a,", "ERROR: parse error"));
+  assert(ev(js, "{let a,}", "ERROR: parse error"));
   assert(ev(js, "let ;", "ERROR: parse error"));
-  assert(ev(js, "let a 2", "ERROR: parse error"));
-  assert(ev(js, "let a = 123", "undefined"));
+  assert(ev(js, "{let a 2}", "ERROR: parse error"));
   assert(ev(js, "let a = 123;", "ERROR: 'a' already declared"));
   assert(ev(js, "let b = 123; 1; b", "123"));
   assert(ev(js, "let c = 2, d = 3; c", "2"));
@@ -349,7 +348,7 @@ static void test_funcs(void) {
   assert(ev(js, "f(1+2,f(2,3))", "8"));
   js_gc(js);
   assert(js->brk == brk);
-  assert(ev(js, "let a=0; (function(){a++;})(); a", "1"));
+  assert(ev(js, "let i,a=0; (function(){a++;})(); a", "1"));
   assert(ev(js, "a=0; (function(){ a++; })(); a", "1"));
 
   assert(ev(js, "a=0; (function(x){a=x;})(2); a", "2"));
@@ -362,6 +361,15 @@ static void test_funcs(void) {
   assert(ev(js, "(function(x){let m='hi';return m;})(1);", "\"hi\""));
   assert(ev(js, "(function(x){let m={a:2};return m;})(1).a;", "2"));
   assert(ev(js, "(function(x){let m={a:x};return m;})(3).a;", "3"));
+
+  assert(ev(js, "i=a=0;f=function(x,y){return x*y;};1;", "1"));
+  brk = js->brk;
+  assert(ev(js, "i=a=0; while (i++ < 99) a=i;a", "99"));
+  assert(js->brk == brk);
+  assert(ev(js, "i=a=0; while (i++ < 9999) a += i*i; a", "333283335000"));
+  assert(js->brk == brk);
+  assert(ev(js, "i=a=0; while (i++ < 9999) a += f(i,i); a", "333283335000"));
+  assert(js->brk == brk);
 }
 
 static void test_bool(void) {
