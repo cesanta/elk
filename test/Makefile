@@ -42,7 +42,7 @@ uno: arduino
 	$(DOCKER) mdashnet/cc2 ./arduino/arduino --verify --board arduino:avr:nano tmp/tmp.ino
 
 cli:
-	$(CC) ../elk.c ../examples/cmdline/main.c $(CFLAGS) -o $@
+	$(CC) ../elk.c ../examples/cmdline/main.c $(CFLAGS) -lm -o $@
 
 
 coverage: test
