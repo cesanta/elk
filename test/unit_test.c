@@ -177,6 +177,10 @@ static void test_basic(void) {
   assert(ev(js, "1 + /*\n//\n*/ 2;", "3"));
 
   assert(ev(js, "b = 2; a = {x:1,y:b};", "{\"y\":2,\"x\":1}"));
+
+  assert(ev(js, "a=5;a;", "5"));
+  assert(ev(js, "a&=3;a;", "1"));
+  assert(ev(js, "a|=3;a;", "3"));
 }
 
 static void test_memory(void) {
