@@ -1,4 +1,4 @@
-CFLAGS ?= -W -Wall -Werror -Wno-deprecated -I.. -g -fsanitize=address,undefined -coverage $(EXTRA)
+CFLAGS ?= -W -Wall -Werror -Wno-deprecated -I.. -g -fsanitize=address,undefined -coverage -lm $(EXTRA)
 CWD ?= $(realpath $(CURDIR))
 ROOT ?= $(realpath $(CURDIR)/..)
 DOCKER = docker run $(DA) --rm -e WINEDEBUG=-all -v $(ROOT):$(ROOT) -w $(CWD)
@@ -7,7 +7,7 @@ define clean
   rm -rf  *.o *.dSYM ut* cli fuzzer* *.gcov *.gcno *.gcda *.obj *.exe *.ilk *.pdb slow-unit* _CL_* infer-out data.txt crash-* a.out tmp
 endef
 
-# %(call build,ENVIRONMENT,COMPILE,FLAGS,OUTPUT,RUNNER)
+# %(call build,ENVIRONMENT,COMPILE,FLAGS,OUTPUT,RUN)
 define build
   $(call clean)
   $1 $2 unit_test.c $3
@@ -17,7 +17,7 @@ endef
 all: test test++ vc2017 linux mingw cli
 
 test:
-	$(call build,,$(CC),$(CFLAGS) -o ut,$(RUNNER) ./ut)
+	$(call build,,$(CC),$(CFLAGS) -o ut,$(RUN) ./ut)
 
 test++:
 	$(call build,,$(CXX),$(CFLAGS) -Wno-deprecated -o ut,./ut)
@@ -26,7 +26,7 @@ vc2017:
 	$(call build,$(DOCKER) mdashnet/vc2017 wine64,cl,/nologo /W3 /O2 /I. $(EXTRA) /Feut.exe,ut.exe)
 
 linux:
-	$(call build,$(DOCKER) mdashnet/cc2,$(CC), $(CFLAGS) -o ut -lm,./ut)
+	$(call build,$(DOCKER) mdashnet/cc2,$(CC), $(CFLAGS) -o ut,./ut)
 
 mingw:
 	$(call build,$(DOCKER) mdashnet/mingw,i686-w64-mingw32-gcc,-W -Wall $(EXTRA) -o ut,wine ut)

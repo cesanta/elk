@@ -29,6 +29,10 @@ static jsval_t require(struct js *js, const char *filename) {
   return js_eval(js, data, len);
 }
 
+static void print(const char *str) {
+  printf("%s", str);
+}
+
 int main(int argc, char *argv[]) {
   char mem[8192];
   struct js *js = js_create(mem, sizeof(mem));
@@ -37,6 +41,7 @@ int main(int argc, char *argv[]) {
 
   // Import our custom function "require" into the global namespace.
   js_set(js, js_glob(js), "require", js_import(js, (uintptr_t) require, "jms"));
+  js_set(js, js_glob(js), "print", js_import(js, (uintptr_t) print, "vs"));
   jsval_t res = js_eval(js, code, strlen(code));
   printf("%s\n", js_str(js, res));
 
