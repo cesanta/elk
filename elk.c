@@ -292,7 +292,7 @@ static jsval_t mkentity(struct js *js, jsoff_t b, const void *buf, size_t len) {
   memcpy(&js->mem[ofs], &b, sizeof(b));
   // Using memmove - in case we're stringifying data from the free JS mem
   if (buf != NULL) memmove(&js->mem[ofs + sizeof(b)], buf, len);
-  if ((b & 3) == T_STR) js->mem[ofs + sizeof(b) + len] = 0;  // 0-terminate
+  if ((b & 3) == T_STR) js->mem[ofs + sizeof(b) + len - 1] = 0;  // 0-terminate
   // printf("MKE: %u @ %u type %d\n", js->brk - ofs, ofs, b & 3);
   return mkval(b & 3, ofs);
 }
