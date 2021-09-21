@@ -1,6 +1,6 @@
 #define JS_DUMP
-#include "../elk.c"
 #include <time.h>
+#include "../elk.c"
 
 static bool ev(struct js *js, const char *expr, const char *expectation) {
   const char *result = js_str(js, js_eval(js, expr, strlen(expr)));
@@ -538,6 +538,9 @@ static void test_ffi(void) {
   assert(ev(js, "a", "334"));
   js_gc(js);
   assert(js->brk == brk);
+
+  js_set(js, js_glob(js), "len", js_import(js, (uintptr_t) strlen, "is"));
+  assert(ev(js, "len('a')", "1"));
 }
 
 int main(void) {

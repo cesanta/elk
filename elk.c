@@ -292,14 +292,14 @@ static jsval_t mkentity(struct js *js, jsoff_t b, const void *buf, size_t len) {
   memcpy(&js->mem[ofs], &b, sizeof(b));
   // Using memmove - in case we're stringifying data from the free JS mem
   if (buf != NULL) memmove(&js->mem[ofs + sizeof(b)], buf, len);
-  if ((b & 3) == T_STR) js->mem[ofs + sizeof(b) + len] = 0;  // 0-terminate
+  if ((b & 3) == T_STR) js->mem[ofs + sizeof(b) + len - 1] = 0;  // 0-terminate
   // printf("MKE: %u @ %u type %d\n", js->brk - ofs, ofs, b & 3);
   return mkval(b & 3, ofs);
 }
 
 static jsval_t mkstr(struct js *js, const void *ptr, size_t len) {
   // printf("MKSTR: [%.*s] -> off %u\n", (int) len, (char *) ptr, js->brk);
-  return mkentity(js, (jsoff_t)(((len + 1) << 2) | T_STR), ptr, len + 1);
+  return mkentity(js, (jsoff_t) (((len + 1) << 2) | T_STR), ptr, len + 1);
 }
 
 static jsval_t mkobj(struct js *js, jsoff_t parent) {
@@ -877,7 +877,7 @@ static jsval_t call_js(struct js *js, const char *fn, int fnlen) {
     js->pos = skiptonext(js->code, js->clen, js->pos);
     if (js->pos < js->clen && js->code[js->pos] == ',') js->pos++;
     fnpos = skiptonext(fn, fnlen, fnpos + identlen);  // Skip past identifier
-    if (fnpos < fnlen && fn[fnpos] == ',') fnpos++;  // And skip comma
+    if (fnpos < fnlen && fn[fnpos] == ',') fnpos++;   // And skip comma
   }
   if (fnpos < fnlen && fn[fnpos] == ')') fnpos++;  // Skip to the function body
   fnpos = skiptonext(fn, fnlen, fnpos);            // Up to the opening brace
@@ -896,10 +896,10 @@ static jsval_t do_call_op(struct js *js, jsval_t func, jsval_t args) {
   if (vtype(args) != T_CODEREF) return js_err(js, "bad call");
   jsoff_t fnlen, fnoff = vstr(js, func, &fnlen);
   const char *fn = (const char *) &js->mem[fnoff];
-  const char *code = js->code;              // Save current parser state
-  jsoff_t clen = js->clen, pos = js->pos;   // code, position and code length
-  js->code = &js->code[coderefoff(args)];   // Point parser to args
-  js->clen = codereflen(args);              // Set args length
+  const char *code = js->code;             // Save current parser state
+  jsoff_t clen = js->clen, pos = js->pos;  // code, position and code length
+  js->code = &js->code[coderefoff(args)];  // Point parser to args
+  js->clen = codereflen(args);             // Set args length
   js->pos = skiptonext(js->code, js->clen, 0);  // Skip to 1st arg
   // printf("CALL [%.*s] -> %.*s\n", (int) js->clen, js->code, (int) fnlen, fn);
   uint8_t tok = js->tok, flags = js->flags;  // Save flags
@@ -1132,8 +1132,8 @@ static jsval_t js_expr(struct js *js, uint8_t etok, uint8_t etok2) {
       right = stk[idx + 1];
       if (is_err(right)) return js_err(js, "bad expr");
     }
-    stk[ri] = do_op(js, op, left, right);       // Perform operation
-    if (is_err(stk[ri])) return stk[ri];        // Propagate error
+    stk[ri] = do_op(js, op, left, right);  // Perform operation
+    if (is_err(stk[ri])) return stk[ri];   // Propagate error
   }
   return stk[0];
 }
@@ -1272,11 +1272,11 @@ static jsval_t js_stmt(struct js *js, uint8_t etok) {
 struct js *js_create(void *buf, size_t len) {
   struct js *js = NULL;
   if (len < sizeof(*js) + esize(T_OBJ)) return js;
-  memset(buf, 0, len);                      // Important!
-  js = (struct js *) buf;                   // struct js lives at the beginning
-  js->mem = (uint8_t *) (js + 1);           // Then goes memory for JS data
-  js->size = (jsoff_t)(len - sizeof(*js));  // JS memory size
-  js->scope = mkobj(js, 0);                 // Create global scope
+  memset(buf, 0, len);                       // Important!
+  js = (struct js *) buf;                    // struct js lives at the beginning
+  js->mem = (uint8_t *) (js + 1);            // Then goes memory for JS data
+  js->size = (jsoff_t) (len - sizeof(*js));  // JS memory size
+  js->scope = mkobj(js, 0);                  // Create global scope
   return js;
 }
 
