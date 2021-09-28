@@ -1238,9 +1238,14 @@ static jsval_t js_return(struct js *js) {
   return resolveprop(js, result);
 }
 
+static bool js_should_garbage_collect(struct js *js) {
+  return js->brk > js->size * 3 / 4;  // Memory is more than 75% full
+}
+
 static jsval_t js_stmt(struct js *js, uint8_t etok) {
   jsval_t res;
-  if (js->lev == 0) js_gc(js);  // Before top-level stmt, garbage collect
+  // Before top-level stmt, garbage collect
+  if (js->lev == 0 && js_should_garbage_collect(js)) js_gc(js);
   js->lev++;
   // clang-format off
   switch (nexttok(js)) {

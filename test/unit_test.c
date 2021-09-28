@@ -105,6 +105,7 @@ static void test_basic(void) {
   assert(ev(js, "({a:1})", "{\"a\":1}"));
   assert(ev(js, "({a:1,b:true})", "{\"b\":true,\"a\":1}"));
   assert(ev(js, "({a:1,b:{c:2}})", "{\"b\":{\"c\":2},\"a\":1}"));
+  js_gc(js);
   assert(js->brk < 100);
 
   assert(ev(js, "1;2", "2"));
@@ -237,7 +238,7 @@ static void test_strings(void) {
 
 static void test_flow(void) {
   struct js *js;
-  char mem[sizeof(*js) + 200];
+  char mem[sizeof(*js) + 300];
   assert((js = js_create(mem, sizeof(mem))) != NULL);
   assert(ev(js, "let a = 1; a", "1"));
   assert(ev(js, "if (true) a++; a", "2"));
@@ -273,6 +274,19 @@ static void test_flow(void) {
   assert(ev(js, "a=0; if (0) a=1; else if (1) a=2; a;", "2"));
   assert(ev(js, "a=0; if (0){7;a=1;}else if (1){7;a=2;} a;", "2"));
   assert(ev(js, "a=0; if(0){7;a=1;}else if(0){5;a=2;}else{3;a=3;} a;", "3"));
+
+#if 0
+  {
+    clock_t a = clock();
+    const char *code =
+        "a=0;b=''; let f = function(){return 'x';}; while (a++<99999)"
+        "{b+=f(); if (b.length > 50) b='';} 42;";
+    ev(js, code, "42");
+    double ms = (double) (clock() - a) * 1000 / CLOCKS_PER_SEC;
+    printf("done in %g ms\n", ms);
+  }
+#endif
+
 #if 0
   // Ternary operator
   assert(ev(js, "1?2:3", "2"));
@@ -372,12 +386,14 @@ static void test_funcs(void) {
   assert(ev(js, "(function(x){let m={a:x};return m;})(3).a;", "3"));
 
   assert(ev(js, "i=a=0;f=function(x,y){return x*y;};1;", "1"));
+  js_gc(js);
   brk = js->brk;
   assert(ev(js, "i=a=0; while (i++ < 99) a=i;a", "99"));
   assert(js->brk == brk);
   assert(ev(js, "i=a=0; while (i++ < 9999) a += i*i; a", "333283335000"));
   assert(js->brk == brk);
   assert(ev(js, "i=a=0; while (i++ < 9999) a += f(i,i); a", "333283335000"));
+  js_gc(js);
   assert(js->brk == brk);
 }
 
