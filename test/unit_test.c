@@ -464,7 +464,7 @@ static void op2(void (*fp)(int, void *), void *userdata) {
 
 static void test_ffi(void) {
   struct js *js;
-  char mem[sizeof(*js) + 1500];
+  char mem[sizeof(*js) + 1800];
 
   assert((js = js_create(mem, sizeof(mem))) != NULL);
   jsval_t obj = js_mkobj(js);
@@ -540,6 +540,7 @@ static void test_ffi(void) {
             " a = foo.f; }, null); 1",
             "1"));
   assert(ev(js, "", "undefined"));  // Trigger GC
+  js_gc(js);
   brk = js->brk;
   assert(s_op2fp != NULL);
   s_op2fp(992, s_op2fp_param);
