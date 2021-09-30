@@ -272,11 +272,13 @@ int main(void) {
 }
 ```
 
-### js\_set(), js\_glob(), js\_mkobj()
+### js\_set(), js\_glob(), js\_mkobj(), js\_mknum(), js\_mkstr()
 
 ```c
 jsval_t js_glob(struct js *);   // Return global object
 jsval_t js_mkobj(struct js *);  // Create a new object
+jsval_t js_mkstr(struct js *, const void *, size_t);  // Create a string
+jsval_t js_mknum(struct js *, double);                // Create a number
 void js_set(struct js *, jsval_t obj, const char *key, jsval_t val);  // Assign property to an object
 ```
 
