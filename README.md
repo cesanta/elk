@@ -1,7 +1,7 @@
 # Elk: a tiny JS engine for embedded systems
 
 [![Build Status](https://github.com/cesanta/elk/workflows/build/badge.svg)](https://github.com/cesanta/elk/actions)
-[![License: GPLv2/Commercial](https://img.shields.io/badge/License-GPLv2%20or%20Commercial-green.svg)](https://opensource.org/licenses/gpl-2.0.php)
+[![License: AGPL/Commercial](https://img.shields.io/badge/License-AGPL%20or%20Commercial-green.svg)](https://opensource.org/licenses/gpl-2.0.php)
 [![Code Coverage](https://codecov.io/gh/cesanta/elk/branch/master/graph/badge.svg)](https://codecov.io/gh/cesanta/elk)
 
 
@@ -317,6 +317,5 @@ Return memory usage percentage - a number between 0 and 100.
 
 ## LICENSE
 
-Dual license: GPLv2 or commercial. For commercial licensing, technical support
+Dual license: AGPLv3 or commercial. For commercial licensing, technical support
 and integration help, please contact us at https://cesanta.com/contact.html
-
