@@ -20,6 +20,8 @@
 
 #include "elk.h"
 
+static struct js *s_js;
+
 // Function that loads JS code from a given file.
 static jsval_t require(struct js *js, const char *filename) {
   char data[32 * 1024];
@@ -33,15 +35,20 @@ static void print(const char *str) {
   printf("%s", str);
 }
 
+static const char *str(jsval_t v) {
+  return js_str(s_js, v);
+}
+
 int main(int argc, char *argv[]) {
   char mem[8192];
-  struct js *js = js_create(mem, sizeof(mem));
+  struct js *js = s_js = js_create(mem, sizeof(mem));
   const char *code = argc > 1 ? argv[1] : "";
   clock_t beginning = clock();
 
   // Import our custom function "require" into the global namespace.
   js_set(js, js_glob(js), "require", js_import(js, (uintptr_t) require, "jms"));
   js_set(js, js_glob(js), "print", js_import(js, (uintptr_t) print, "vs"));
+  js_set(js, js_glob(js), "str", js_import(js, (uintptr_t) str, "sj"));
   jsval_t res = js_eval(js, code, strlen(code));
   printf("%s\n", js_str(js, res));
 

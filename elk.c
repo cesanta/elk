@@ -112,28 +112,6 @@ static const char *typestr(uint8_t t) {
   return (t < sizeof(names) / sizeof(names[0])) ? names[t] : "??";
 }
 
-#ifdef JS32
-// Pack JS values into uin32_t, float -infinity
-// 32bit "float": 1 bit sign, 8 bits exponent, 23 bits mantissa
-//
-//  7f80 0000 = 01111111 10000000 00000000 00000000 = infinity
-//  ff80 0000 = 11111111 10000000 00000000 00000000 = −infinity
-//  ffc0 0001 = x1111111 11000000 00000000 00000001 = qNaN (on x86 and ARM)
-//  ff80 0001 = x1111111 10000000 00000000 00000001 = sNaN (on x86 and ARM)
-//
-//  seeeeeee|emmmmmmm|mmmmmmmm|mmmmmmmm
-//  11111111|1ttttvvv|vvvvvvvv|vvvvvvvv
-//    INF     TYPE     PAYLOAD
-static jsval_t tov(float d) { union { float d; jsval_t v; } u = {d}; return u.v; }
-static float tod(jsval_t v) { union { jsval_t v; float d; } u = {v}; return u.d; }
-static jsval_t mkval(uint8_t type, unsigned long data) { return ((jsval_t) 0xff800000) | ((jsval_t) (type) << 19) | data; }
-static bool is_nan(jsval_t v) { return (v >> 23) == 0x1ff; }
-static uint8_t vtype(jsval_t v) { return is_nan(v) ? (v >> 19) & 15 : T_NUM; }
-static unsigned long vdata(jsval_t v) { return v & ~((jsval_t) 0xfff80000); }
-static jsval_t mkcoderef(jsval_t off, jsoff_t len) { return mkval(T_CODEREF, (off & 0xfff) | ((len & 127) << 12)); }
-static jsoff_t coderefoff(jsval_t v) { return v & 0xfff; }
-static jsoff_t codereflen(jsval_t v) { return (v >> 12) & 127; }
-#else
 // Pack JS values into uin64_t, double nan, per IEEE 754
 // 64bit "double": 1 bit sign, 11 bits exponent, 52 bits mantissa
 //
@@ -155,7 +133,7 @@ static unsigned long vdata(jsval_t v) { return (unsigned long) (v & ~((jsval_t) 
 static jsval_t mkcoderef(jsval_t off, jsoff_t len) { return mkval(T_CODEREF, (off & 0xffffff) | ((len & 0xffffff) << 24)); }
 static jsoff_t coderefoff(jsval_t v) { return v & 0xffffff; }
 static jsoff_t codereflen(jsval_t v) { return (v >> 24) & 0xffffff; }
-#endif
+
 static uint8_t unhex(uint8_t c) { return (c >= '0' && c <= '9') ? c - '0' : (c >= 'a' && c <= 'f') ? c - 'W' : (c >= 'A' && c <= 'F') ? c - '7' : 0; }
 static uint64_t unhexn(const uint8_t *s, int len) { uint64_t v = 0; for (int i = 0; i < len; i++) { if (i > 0) v <<= 4; v |= unhex(s[i]); } return v; }
 static bool is_space(int c) { return c == ' ' || c == '\r' || c == '\n' || c == '\t' || c == '\f' || c == '\v'; }
@@ -265,9 +243,11 @@ const char *js_str(struct js *js, jsval_t value) {
   // Leave jsoff_t placeholder between js->brk and a stringify buffer,
   // in case if next step is convert it into a JS variable
   char *buf = (char *) &js->mem[js->brk + sizeof(jsoff_t)];
+  size_t len, available = js->size - js->brk - sizeof(jsoff_t);
   if (is_err(value)) return js->errmsg;
   if (js->brk + sizeof(jsoff_t) >= js->size) return "";
-  tostr(js, value, buf, js->size - js->brk - sizeof(jsoff_t));
+  len = tostr(js, value, buf, available);
+  js_mkstr(js, NULL, len);
   // printf("JSSTR: %d [%s]\n", vtype(value), buf);
   return buf;
 }
@@ -654,6 +634,8 @@ static jsval_t do_string_op(struct js *js, uint8_t op, jsval_t l, jsval_t r) {
   jsoff_t n2, off2 = vstr(js, r, &n2);
   if (op == TOK_PLUS) {
     jsval_t res = js_mkstr(js, NULL, n1 + n2);
+    // printf("STRPLUS [%.*s] [%.*s]\n", (int) n1, &js->mem[off1], (int) n2,
+    //       &js->mem[off2]);
     if (vtype(res) == T_STR) {
       jsoff_t n, off = vstr(js, res, &n);
       memmove(&js->mem[off], &js->mem[off1], n1);
@@ -1062,8 +1044,8 @@ static jsval_t js_expr(struct js *js, uint8_t etok, uint8_t etok2) {
     if (is_op(tok)) {
       // Convert this plus or minus to unary if required
       if (tok == TOK_PLUS || tok == TOK_MINUS) {
-        bool convert =
-            (n == 0) || (is_op(pt) && (!is_unary(pt) || is_right_assoc(pt)));
+        bool convert = (n == 0) || (pt != TOK_CALL && is_op(pt) &&
+                                    (!is_unary(pt) || is_right_assoc(pt)));
         if (convert && tok == TOK_PLUS) tok = TOK_UPLUS;
         if (convert && tok == TOK_MINUS) tok = TOK_UMINUS;
       }
@@ -1239,7 +1221,7 @@ static jsval_t js_return(struct js *js) {
 }
 
 static bool js_should_garbage_collect(struct js *js) {
-  return js->brk > js->size * 3 / 4;  // Memory is more than 75% full
+  return js->brk > js->size / 2;  // Memory is more than 75% full
 }
 
 static jsval_t js_stmt(struct js *js, uint8_t etok) {

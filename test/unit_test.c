@@ -389,12 +389,18 @@ static void test_funcs(void) {
   js_gc(js);
   brk = js->brk;
   assert(ev(js, "i=a=0; while (i++ < 99) a=i;a", "99"));
+  js_gc(js);
   assert(js->brk == brk);
   assert(ev(js, "i=a=0; while (i++ < 9999) a += i*i; a", "333283335000"));
+  js_gc(js);
   assert(js->brk == brk);
   assert(ev(js, "i=a=0; while (i++ < 9999) a += f(i,i); a", "333283335000"));
   js_gc(js);
   assert(js->brk == brk);
+
+  js_eval(js, "f=function(){return 1;};", ~0);
+  assert(ev(js, "f();", "1"));
+  assert(ev(js, "f() + 2;", "3"));
 }
 
 static void test_bool(void) {
@@ -427,6 +433,9 @@ static void test_gc(void) {
   assert(js->brk == brk);
 }
 
+static const char *hi(void) {
+  return "hi";
+}
 static int sum1(int a, int b) {
   // printf("SUM1 %d %d\n", a, b);
   return a + b;
@@ -482,6 +491,7 @@ static void test_ffi(void) {
   js_set(js, obj, "delete", js_import(js, (uintptr_t) sum1, "iii"));
   js_set(js, js_glob(js), "eval", js_import(js, (uintptr_t) js_eval, "jmsi"));
   js_set(js, js_glob(js), "str", js_import(js, (uintptr_t) js_str, "smj"));
+  js_set(js, js_glob(js), "hi", js_import(js, (uintptr_t) hi, "s"));
   assert(ev(js, "os.atoi()", "ERROR: bad arg 1"));
   assert(ev(js, "os.bad1(1)", "ERROR: bad sig"));
   assert(ev(js, "os.sum1(1)", "ERROR: bad arg 2"));
@@ -501,6 +511,11 @@ static void test_ffi(void) {
   assert(ev(js, "a=b=0; while(a++<1){f();f();b++;};b", "1"));
   assert(ev(js, "eval(null, '3+4',3)", "7"));
   assert(ev(js, "str(null, 123)", "\"123\""));
+  assert(ev(js, "hi()", "\"hi\""));
+  assert(ev(js, "hi() + 'a'", "\"hia\""));
+  assert(ev(js, "hi() + 'a' + hi()", "\"hiahi\""));
+  assert(ev(js, "str(null, 1) + 'a'", "\"1a\""));
+  assert(ev(js, "str(null, 1) + 'a' + str(null, {})", "\"1a{}\""));
 
   // Test that ffi-ed callback can call ffi-ed functions
   assert(ev(js, "os.op(function(x){return os.sum1(x,1);},2,3,null)", "6"));

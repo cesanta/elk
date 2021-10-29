@@ -7,6 +7,9 @@ select, input, label::before, textarea {
   outline: none; box-shadow:none !important; 
   border: 1px solid #ccc !important; 
 }
+::-webkit-scrollbar { background: transparent; width: 0; }
+body { -ms-overflow-style: none; scrollbar-width: none; }
+
 .xfa {width: 0.75em !important;}
 .noselect { user-select: none; }
 .dropdown-item { cursor: pointer; }
