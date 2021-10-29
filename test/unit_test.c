@@ -515,7 +515,7 @@ static void test_ffi(void) {
   assert(ev(js, "hi() + 'a'", "\"hia\""));
   assert(ev(js, "hi() + 'a' + hi()", "\"hiahi\""));
   assert(ev(js, "str(null, 1) + 'a'", "\"1a\""));
-  assert(ev(js, "str(null, 1) + 'a' + str(null, {})", "\"1a{}\""));
+  assert(ev(js, "str(null, 1) + 'a' + str(null, 2)", "\"1a2\""));
 
   // Test that ffi-ed callback can call ffi-ed functions
   assert(ev(js, "os.op(function(x){return os.sum1(x,1);},2,3,null)", "6"));
