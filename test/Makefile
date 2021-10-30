@@ -2,9 +2,10 @@ CFLAGS ?= -W -Wall -Werror -Wno-deprecated -I.. -g -fsanitize=address,undefined 
 CWD ?= $(realpath $(CURDIR))
 ROOT ?= $(realpath $(CURDIR)/..)
 DOCKER = docker run $(DA) --rm -e WINEDEBUG=-all -v $(ROOT):$(ROOT) -w $(CWD)
+DESTDIR ?= .
 
 define clean
-  rm -rf  *.o *.dSYM ut* cli fuzzer* *.gcov *.gcno *.gcda *.obj *.exe *.ilk *.pdb slow-unit* _CL_* infer-out data.txt crash-* a.out tmp
+  rm -rf  *.o *.dSYM ut* elk fuzzer* *.gcov *.gcno *.gcda *.obj *.exe *.ilk *.pdb slow-unit* _CL_* infer-out data.txt crash-* a.out tmp
 endef
 
 # %(call build,ENVIRONMENT,COMPILE,FLAGS,OUTPUT,RUN)
@@ -14,7 +15,7 @@ define build
   $1 $4
 endef
 
-all: test test++ vc2017 linux mingw cli
+all: test test++ vc2017 linux mingw elk
 
 test:
 	$(call build,,$(CC),$(CFLAGS) -o ut,$(RUN) ./ut)
@@ -41,8 +42,8 @@ uno: arduino
 	cp ../elk.c ../elk.h tmp/
 	$(DOCKER) mdashnet/cc2 ./arduino/arduino --verify --board arduino:avr:nano tmp/tmp.ino
 
-cli:
-	$(CC) ../elk.c ../examples/cmdline/main.c $(CFLAGS) -lm -o $@
+elk:
+	$(CC) ../elk.c ../examples/cmdline/main.c -I.. -W -Wall -O2 -lm -o $(DESTDIR)/$@
 
 
 coverage: test
