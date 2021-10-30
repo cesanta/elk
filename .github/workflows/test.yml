@@ -6,13 +6,13 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: make
-      run: make -C test test test++ cli EXTRA="-lm"
+      run: make -C test test test++ elk EXTRA="-lm"
   MacOS:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v2
     - name: make
-      run: make -C test test++ cli upload-coverage
+      run: make -C test test++ elk upload-coverage
   Windows:
     runs-on: ubuntu-latest
     steps:
