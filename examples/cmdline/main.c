@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
     } else if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
       res = js_eval(js, argv[++i], ~0);
     } else {
-      printf("Usage: %s [-v] [-e EXPRESSION] ...", argv[0]);
+      printf("Usage: %s [-v] [-e EXPRESSION] ...\n", argv[0]);
     }
   }
 
