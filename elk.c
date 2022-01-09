@@ -1123,10 +1123,10 @@ static jsval_t js_expr(struct js *js, uint8_t etok, uint8_t etok2) {
     uint8_t flags = js->flags;
     bool noexec = flags & F_NOEXEC;
     bool cond_true = js_truthy(js, stk[0]);
-    if (!noexec && !cond_true) js->flags |= F_NOEXEC;
+    if (noexec || !cond_true) js->flags |= F_NOEXEC;
     jsval_t res1 = js_expr(js, TOK_COLON, TOK_COLON);
     js->flags = flags;
-    if (!noexec && cond_true) js->flags |= F_NOEXEC;
+    if (noexec || cond_true) js->flags |= F_NOEXEC;
     jsval_t res2 = js_expr(js, TOK_SEMICOLON, TOK_SEMICOLON);
     js->flags = flags;
     stk[0] = cond_true ? res1 : res2;

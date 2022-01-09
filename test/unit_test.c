@@ -584,6 +584,7 @@ static void test_ternary(void) {
   assert(ev(js, "let f=function(n){return n<2?1:n*f(n-1);}; 0", "0"));
   assert(ev(js, "f(0)", "1"));
   assert(ev(js, "f(5)", "120"));
+  assert(ev(js, "f(10)", "3628800"));
 }
 
 int main(void) {
