@@ -1,4 +1,4 @@
-// Copyright (c) 2013-2021 Cesanta Software Limited
+// Copyright (c) 2013-2022 Cesanta Software Limited
 // All rights reserved
 //
 // This software is dual-licensed: you can redistribute it and/or modify
@@ -17,7 +17,7 @@
 #pragma once
 #include <stdint.h>
 
-#define JS_VERSION "2.1.2"
+#define JS_VERSION "2.2.0"
 
 struct js;                 // JS engine (opaque)
 typedef uint64_t jsval_t;  // JS value placeholder
