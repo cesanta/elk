@@ -1041,6 +1041,7 @@ static jsval_t js_expr(struct js *js, uint8_t etok, uint8_t etok2) {
     if (n >= JS_EXPR_MAX) return js_err(js, "expr too deep");
     // Convert TOK_LPAREN to a function call TOK_CALL if required
     if (tok == TOK_LPAREN && (n > 0 && !is_op(pt))) tok = TOK_CALL;
+    if (tok == TOK_Q) break;
     if (is_op(tok)) {
       // Convert this plus or minus to unary if required
       if (tok == TOK_PLUS || tok == TOK_MINUS) {
@@ -1116,6 +1117,19 @@ static jsval_t js_expr(struct js *js, uint8_t etok, uint8_t etok2) {
     }
     stk[ri] = do_op(js, op, left, right);  // Perform operation
     if (is_err(stk[ri])) return stk[ri];   // Propagate error
+  }
+  // Handle ternary operator
+  if (tok == TOK_Q) {
+    uint8_t flags = js->flags;
+    bool noexec = flags & F_NOEXEC;
+    bool cond_true = js_truthy(js, stk[0]);
+    if (!noexec && !cond_true) js->flags |= F_NOEXEC;
+    jsval_t res1 = js_expr(js, TOK_COLON, TOK_COLON);
+    js->flags = flags;
+    if (!noexec && cond_true) js->flags |= F_NOEXEC;
+    jsval_t res2 = js_expr(js, TOK_SEMICOLON, TOK_SEMICOLON);
+    js->flags = flags;
+    stk[0] = cond_true ? res1 : res2;
   }
   return stk[0];
 }

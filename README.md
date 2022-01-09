@@ -95,11 +95,11 @@ int main(void) {
 
 - Operations: all standard JS operations except:
    - `!=`, `==`. Use strict comparison `!==`, `===`
-   - No ternary operator `a ? b : c`
    - No computed member access `a[b]`
 - Typeof: `typeof('a') === 'string'`
 - While: `while (...) { ... }`
 - Conditional: `if (...) ... else ...`
+- Ternary operator `a ? b : c`
 - Simple types: `let a, b, c = 12.3, d = 'a', e = null, f = true, g = false;`
 - Functions: `let f = function(x, y) { return x + y; };`
 - Objects: `let obj = {f: function(x) { return x * 2}}; obj.f(3);`

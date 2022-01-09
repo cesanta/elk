@@ -4,10 +4,9 @@
 
 static bool ev(struct js *js, const char *expr, const char *expectation) {
   const char *result = js_str(js, js_eval(js, expr, strlen(expr)));
-#ifdef VERBOSE
-  printf("[%s] -> [%s] [%s]\n", expr, result, expectation);
-#endif
-  return strcmp(result, expectation) == 0;
+  bool correct = strcmp(result, expectation) == 0;
+  if (!correct) printf("[%s] -> [%s] [%s]\n", expr, result, expectation);
+  return correct;
 }
 
 static void test_arith(void) {
@@ -89,7 +88,6 @@ static void test_errors(void) {
   assert(ev(js, "yield", "ERROR: 'yield' not implemented"));
   assert(ev(js, "@", "ERROR: parse error"));
   assert(ev(js, "$", "ERROR: '$' not found"));
-  assert(ev(js, "1?2:3", "ERROR: unknown op 130"));
 }
 
 static void test_basic(void) {
@@ -575,8 +573,22 @@ static void test_ffi(void) {
   assert(ev(js, "len('a')", "1"));
 }
 
+static void test_ternary(void) {
+  struct js *js;
+  char mem[sizeof(*js) + 500];
+  assert((js = js_create(mem, sizeof(mem))) != NULL);
+  assert(ev(js, "1?2:3", "2"));
+  assert(ev(js, "0?2:3", "3"));
+  assert(ev(js, "true ? 1 + 2 : 'doh'", "3"));
+  assert(ev(js, "false ? 1 + 2 : 'doh'", "\"doh\""));
+  assert(ev(js, "let f=function(n){return n<2?1:n*f(n-1);}; 0", "0"));
+  assert(ev(js, "f(0)", "1"));
+  assert(ev(js, "f(5)", "120"));
+}
+
 int main(void) {
   clock_t a = clock();
+  test_ternary();
   test_basic();
   test_bool();
   test_gc();
