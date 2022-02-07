@@ -35,6 +35,10 @@
 #define JS_EXPR_MAX 20
 #endif
 
+#ifndef JS_GC_THRESHOLD
+#define JS_GC_THRESHOLD 0.75
+#endif
+
 typedef uint32_t jsoff_t;
 
 struct js {
@@ -42,11 +46,11 @@ struct js {
   char errmsg[36];   // Error message placeholder
   uint8_t tok;       // Last parsed token value
   uint8_t flags;     // Execution flags, see F_* enum below
-  uint16_t lev;      // Recursion level
   jsoff_t clen;      // Code snippet length
   jsoff_t pos;       // Current parsing position
   jsoff_t toff;      // Offset of the last parsed token
   jsoff_t tlen;      // Length of the last parsed token
+  jsoff_t nogc;      // Entity offset to exclude from GC
   jsval_t tval;      // Holds last parsed numeric or string literal value
   jsval_t scope;     // Current scope
 #define F_NOEXEC 1   // Parse code, but not execute
@@ -75,7 +79,6 @@ struct js {
 //
 // FFI userdata callback pointers "cbs" are placed past js.size. Since they
 // are passed to the user's C code, they stay constant and are not GC-ed
-#define MARK ~(((jsoff_t) ~0) >> 1)  // Entity deletion marker
 
 // clang-format off
 enum { 
@@ -315,11 +318,12 @@ static bool is_mem_entity(uint8_t t) {
   return t == T_OBJ || t == T_PROP || t == T_STR || t == T_FUNC;
 }
 
+#define GCMASK ~(((jsoff_t) ~0) >> 1)  // Entity deletion marker
 static void js_fixup_offsets(struct js *js, jsoff_t start, jsoff_t size) {
   for (jsoff_t n, v, off = 0; off < js->brk; off += n) {  // start from 0!
     v = loadoff(js, off);
-    n = esize(v & ~MARK);
-    if (v & MARK) continue;  // To be deleted, don't bother
+    n = esize(v & ~GCMASK);
+    if (v & GCMASK) continue;  // To be deleted, don't bother
     if ((v & 3) != T_OBJ && (v & 3) != T_PROP) continue;
     if (v > start) saveoff(js, off, v - size);
     if ((v & 3) == T_PROP) {
@@ -333,6 +337,7 @@ static void js_fixup_offsets(struct js *js, jsoff_t start, jsoff_t size) {
       }
     }
   }
+
   for (jsoff_t i = 0; i < js->ncbs; i++) {
     jsoff_t base = js->size + i * 3 * sizeof(jsoff_t) + sizeof(jsoff_t);
     jsoff_t o1 = loadoff(js, base), o2 = loadoff(js, base + sizeof(o1));
@@ -347,8 +352,8 @@ static void js_fixup_offsets(struct js *js, jsoff_t start, jsoff_t size) {
 static void js_delete_marked_entities(struct js *js) {
   for (jsoff_t n, v, off = 0; off < js->brk; off += n) {
     v = loadoff(js, off);
-    n = esize(v & ~MARK);
-    if (v & MARK) {  // This entity is marked for deletion, remove it
+    n = esize(v & ~GCMASK);
+    if (v & GCMASK) {  // This entity is marked for deletion, remove it
       // printf("DEL: %4u %d %x\n", off, v & 3, n);
       // assert(off + n <= js->brk);
       js_fixup_offsets(js, off, n);
@@ -362,43 +367,44 @@ static void js_delete_marked_entities(struct js *js) {
 static void js_mark_all_entities_for_deletion(struct js *js) {
   for (jsoff_t v, off = 0; off < js->brk; off += esize(v)) {
     v = loadoff(js, off);
-    saveoff(js, off, v | MARK);
+    saveoff(js, off, v | GCMASK);
+    // printf("GCMASK %5u %d\n", off, v & 3);
   }
 }
 
 static jsoff_t js_unmark_entity(struct js *js, jsoff_t off) {
   jsoff_t v = loadoff(js, off);
-  if (v & MARK) {
-    saveoff(js, off, v & ~MARK);
-    // printf("UNMARK %5u\n", off);
-    if ((v & 3) == T_OBJ) js_unmark_entity(js, v & ~(MARK | 3));
+  if (v & GCMASK) {
+    saveoff(js, off, v & ~GCMASK);
+    // printf("UNMARK %5u %d\n", off, v & 3);
+    if ((v & 3) == T_OBJ) js_unmark_entity(js, v & ~(GCMASK | 3));
     if ((v & 3) == T_PROP) {
-      js_unmark_entity(js, v & ~(MARK | 3));                 // Unmark next prop
+      js_unmark_entity(js, v & ~(GCMASK | 3));               // Unmark next prop
       js_unmark_entity(js, loadoff(js, off + sizeof(off)));  // Unmark key
       jsval_t val = loadval(js, off + sizeof(off) + sizeof(off));
       if (is_mem_entity(vtype(val))) js_unmark_entity(js, vdata(val));
     }
   }
-  return v & ~(MARK | 3);
+  return v & ~(GCMASK | 3);
 }
 
 static void js_unmark_used_entities(struct js *js) {
-  for (jsval_t scope = js->scope;;) {
+  jsval_t scope = js->scope;
+  do {
     js_unmark_entity(js, vdata(scope));
-    jsoff_t off = loadoff(js, vdata(scope)) & ~3;
-    while (off < js->brk && off != 0) off = js_unmark_entity(js, off);
-    if (vdata(scope) == 0) break;  // Last (global) scope processed
     scope = upper(js, scope);
-  }
+  } while (vdata(scope) != 0);  // When global scope is GC-ed, stop
   for (jsoff_t i = 0; i < js->ncbs; i++) {
     jsoff_t base = js->size + i * 3 * sizeof(jsoff_t) + sizeof(jsoff_t);
     js_unmark_entity(js, loadoff(js, base));
     js_unmark_entity(js, loadoff(js, base + sizeof(jsoff_t)));
   }
+  if (js->nogc) js_unmark_entity(js, js->nogc - sizeof(jsoff_t));
 }
 
 void js_gc(struct js *js) {
-  // printf("GC RUN\n");
+  // printf("================== GC %u\n", js->nogc);
+  if (js->nogc == (jsoff_t) ~0) return;  // ~0 is a special case: GC Is disabled
   js_mark_all_entities_for_deletion(js);
   js_unmark_used_entities(js);
   js_delete_marked_entities(js);
@@ -571,20 +577,6 @@ static jsval_t js_block(struct js *js, bool create_scope) {
   return res;
 }
 
-static jsval_t js_eval_nogc(struct js *js, const char *buf, jsoff_t len) {
-  jsval_t res = mkval(T_UNDEF, 0);
-  js->tok = TOK_ERR;
-  js->code = buf;
-  js->clen = len;
-  js->pos = 0;
-  while (js->tok != TOK_EOF && !is_err(res)) {
-    js->pos = skiptonext(js->code, js->clen, js->pos);
-    if (js->pos >= js->clen) break;
-    res = js_stmt(js, TOK_SEMICOLON);
-  }
-  return res;
-}
-
 static jsval_t resolveprop(struct js *js, jsval_t v) {
   if (vtype(v) != T_PROP) return v;
   v = loadval(js, vdata(v) + sizeof(jsoff_t) + sizeof(jsoff_t));
@@ -713,6 +705,8 @@ static jw_t fficb(uintptr_t param, union ffi_val *args) {
       default: n += snprintf(buf + n, max - n, "%s", "null"); break;
     }
   }
+  jsoff_t nogc = js->nogc;
+  js->nogc = f2off;
   const char *code = js->code;             // Save current parser state
   jsoff_t clen = js->clen, pos = js->pos;  // code, position and code length
   js->code = buf;                          // Point parser to args
@@ -722,6 +716,7 @@ static jw_t fficb(uintptr_t param, union ffi_val *args) {
   //printf("CALLING %s %p [%s] -> [%.*s]\n", decl, args, buf, (int) f2len, (char *) &js->mem[f2off]);
   jsval_t res = call_js(js, (char *) &js->mem[f2off], f2len);
   js->code = code, js->clen = clen, js->pos = pos;  // Restore parser
+  js->nogc = nogc;
   //printf("FFICB->[%s]\n", js_str(js, res));
   switch (decl[1]) {
     case 'v': return mkval(T_UNDEF, 0);
@@ -801,10 +796,14 @@ static jsval_t call_c(struct js *js, const char *fn, int fnlen, jsoff_t fnoff) {
     if (js->pos < js->clen && js->code[js->pos] == ',') js->pos++;
   }
   uintptr_t f = (uintptr_t) unhexn((uint8_t *) &fn[i + 1], fnlen - i - 1);
-  //printf("  type %d nargs %d addr %" PRIxPTR "\n", type, n, f);
+  jsoff_t nogc = js->nogc;
+  //printf("  type %d nargs %d addr %lx\n", type, n, f);
   if (js->pos != js->clen) return js_err(js, "num args");
   if (fn[i] != '@') return js_err(js, "ffi");
   if (f == 0) return js_err(js, "ffi");
+  // Calling imported js_eval is a special case. It may call GC, and its
+  // second argument (a code) can drift. Thus, disable GC alltogether
+  if (f == (uintptr_t)js_eval) js->nogc = ~0;
 #ifndef WIN32
 #define __cdecl
 #endif
@@ -831,6 +830,7 @@ static jsval_t call_c(struct js *js, const char *fn, int fnlen, jsoff_t fnoff) {
     case 'j': return (jsval_t) res.u64;
   }
   // clang-format on
+  js->nogc = nogc;
   return js_err(js, "bad sig");
 }
 ///////////////////////////////////////////////  C  FFI implementation end
@@ -866,8 +866,8 @@ static jsval_t call_js(struct js *js, const char *fn, int fnlen) {
   if (fnpos < fnlen && fn[fnpos] == '{') fnpos++;  // And skip the brace
   jsoff_t n = fnlen - fnpos - 1;  // Function code with stripped braces
   // printf("  %d. calling, %u [%.*s]\n", js->flags, n, (int) n, &fn[fnpos]);
-  js->flags = F_CALL;  // Mark we're in the function call
-  jsval_t res = js_eval_nogc(js, &fn[fnpos], n);         // Call function, no GC
+  js->flags = F_CALL;                        // Mark we're in the function call
+  jsval_t res = js_eval(js, &fn[fnpos], n);  // Call function, no GC
   if (!(js->flags & F_RETURN)) res = mkval(T_UNDEF, 0);  // Is return called?
   delscope(js);                                          // Delete call scope
   return res;
@@ -885,11 +885,13 @@ static jsval_t do_call_op(struct js *js, jsval_t func, jsval_t args) {
   js->pos = skiptonext(js->code, js->clen, 0);  // Skip to 1st arg
   // printf("CALL [%.*s] -> %.*s\n", (int) js->clen, js->code, (int) fnlen, fn);
   uint8_t tok = js->tok, flags = js->flags;  // Save flags
+  jsoff_t nogc = js->nogc;
+  if (fn[0] == '(') js->nogc = fnoff;
   jsval_t res = fn[0] != '(' ? call_c(js, fn, fnlen, fnoff - sizeof(jsoff_t))
                              : call_js(js, fn, fnlen);
   // printf("  -> %s\n", js_str(js, res));
   js->code = code, js->clen = clen, js->pos = pos;  // Restore parser
-  js->flags = flags, js->tok = tok;
+  js->flags = flags, js->tok = tok, js->nogc = nogc;
   return res;
 }
 
@@ -1234,15 +1236,10 @@ static jsval_t js_return(struct js *js) {
   return resolveprop(js, result);
 }
 
-static bool js_should_garbage_collect(struct js *js) {
-  return js->brk > js->size / 2;  // Memory is more than 75% full
-}
-
 static jsval_t js_stmt(struct js *js, uint8_t etok) {
   jsval_t res;
-  // Before top-level stmt, garbage collect
-  if (js->lev == 0 && js_should_garbage_collect(js)) js_gc(js);
-  js->lev++;
+  // printf("USAGE %d\n", js_usage(js));
+  js_gc(js);
   // clang-format off
   switch (nexttok(js)) {
     case TOK_CASE: case TOK_CATCH: case TOK_CLASS: case TOK_CONST:
@@ -1265,7 +1262,6 @@ static jsval_t js_stmt(struct js *js, uint8_t etok) {
       break;
   }
   //clang-format on
-  js->lev--;
   return res;
 }
 // clang-format on
@@ -1312,8 +1308,18 @@ jsval_t js_import(struct js *js, uintptr_t fn, const char *signature) {
 
 jsval_t js_eval(struct js *js, const char *buf, size_t len) {
   // printf("EVAL: [%.*s]\n", (int) len, buf);
+  jsval_t res = mkval(T_UNDEF, 0);
   if (len == (size_t) ~0) len = strlen(buf);
-  return js_eval_nogc(js, buf, (jsoff_t) len);
+  js->tok = TOK_ERR;
+  js->code = buf;
+  js->clen = (jsoff_t) len;
+  js->pos = 0;
+  while (js->tok != TOK_EOF && !is_err(res)) {
+    js->pos = skiptonext(js->code, js->clen, js->pos);
+    if (js->pos >= js->clen) break;
+    res = js_stmt(js, TOK_SEMICOLON);
+  }
+  return res;
 }
 
 #ifdef JS_DUMP

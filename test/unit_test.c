@@ -92,7 +92,7 @@ static void test_errors(void) {
 
 static void test_basic(void) {
   struct js *js;
-  char mem[sizeof(*js) + 250];
+  char mem[sizeof(*js) + 350];
   assert((js = js_create(mem, sizeof(mem))) != NULL);
   assert(ev(js, "null", "null"));
   assert(ev(js, "null", "null"));
@@ -369,6 +369,8 @@ static void test_funcs(void) {
   assert(ev(js, "f(1+2,f(2,3))", "8"));
   js_gc(js);
   assert(js->brk == brk);
+  assert(ev(js, "f('a','b')", "\"ab\""));
+
   assert(ev(js, "let i,a=0; (function(){a++;})(); a", "1"));
   assert(ev(js, "a=0; (function(){ a++; })(); a", "1"));
 
@@ -418,9 +420,14 @@ static void test_bool(void) {
   assert(ev(js, "2 >= 2", "true"));
 }
 
+void prnt(const char *s) {
+  (void) s;
+  // printf("%s", s);
+}
+
 static void test_gc(void) {
   struct js *js;
-  char mem[sizeof(*js) + 200];
+  char mem[sizeof(*js) + 1500];
   assert((js = js_create(mem, sizeof(mem))) != NULL);
   jsval_t obj = js_mkobj(js);
   js_set(js, js_glob(js), "os", obj);
@@ -429,6 +436,12 @@ static void test_gc(void) {
   jsoff_t brk = js->brk;
   js_gc(js);
   assert(js->brk == brk);
+  js_set(js, js_glob(js), "prnt", js_import(js, (uintptr_t) prnt, "vs"));
+  js_set(js, js_glob(js), "str", js_import(js, (uintptr_t) js_str, "smj"));
+  assert(ev(js,
+            "let f=function(){let n=0; while (n++ < "
+            "100){prnt(str(0,n)+'\\n');} return n;}; f()",
+            "101"));
 }
 
 static const char *hi(void) {
@@ -577,12 +590,16 @@ static void test_ternary(void) {
   struct js *js;
   char mem[sizeof(*js) + 500];
   assert((js = js_create(mem, sizeof(mem))) != NULL);
+  assert(ev(js, "'aa'; 'cc'; 'bb';", "\"bb\""));
+  assert(ev(js, "'aa'; 'cc'; '12345'; 'bb';", "\"bb\""));
   assert(ev(js, "1?2:3", "2"));
   assert(ev(js, "0?2:3", "3"));
   assert(ev(js, "true ? 1 + 2 : 'doh'", "3"));
   assert(ev(js, "false ? 1 + 2 : 'doh'", "\"doh\""));
   assert(ev(js, "let f=function(n){return n<2?1:n*f(n-1);}; 0", "0"));
   assert(ev(js, "f(0)", "1"));
+  assert(ev(js, "f(3)", "6"));
+  assert(ev(js, "f(4)", "24"));
   assert(ev(js, "f(5)", "120"));
   assert(ev(js, "f(10)", "3628800"));
 }
