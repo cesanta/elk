@@ -281,8 +281,9 @@ static jsval_t mkentity(struct js *js, jsoff_t b, const void *buf, size_t len) {
 }
 
 jsval_t js_mkstr(struct js *js, const void *ptr, size_t len) {
-  // printf("MKSTR: [%.*s] -> off %u\n", (int) len, (char *) ptr, js->brk);
-  return mkentity(js, (jsoff_t) (((len + 1) << 2) | T_STR), ptr, len + 1);
+  jsoff_t n = (jsoff_t) (len + 1);
+  // printf("MKSTR %u %u\n", n, js->brk);
+  return mkentity(js, (jsoff_t) ((n << 2) | T_STR), ptr, n);
 }
 
 static jsval_t mkobj(struct js *js, jsoff_t parent) {
@@ -561,9 +562,7 @@ static void delscope(struct js *js) {
 
 static jsval_t js_block(struct js *js, bool create_scope) {
   jsval_t res = mkval(T_UNDEF, 0);
-  jsoff_t brk1 = js->brk;
   if (create_scope) mkscope(js);  // Enter new scope
-  jsoff_t brk2 = js->brk;
   while (js->tok != TOK_EOF && js->tok != TOK_RBRACE) {
     js->pos = skiptonext(js->code, js->clen, js->pos);
     if (js->pos < js->clen && js->code[js->pos] == '}') break;
@@ -572,8 +571,7 @@ static jsval_t js_block(struct js *js, bool create_scope) {
   }
   if (js->pos < js->clen && js->code[js->pos] == '}') js->pos++;
   // printf("BLOCKEND [%.*s]\n", js->pos - pos, &js->code[pos]);
-  if (create_scope) delscope(js);       // Exit scope
-  if (js->brk == brk2) js->brk = brk1;  // Fast scope GC
+  if (create_scope) delscope(js);  // Exit scope
   return res;
 }
 
@@ -626,8 +624,9 @@ static jsval_t do_string_op(struct js *js, uint8_t op, jsval_t l, jsval_t r) {
   jsoff_t n2, off2 = vstr(js, r, &n2);
   if (op == TOK_PLUS) {
     jsval_t res = js_mkstr(js, NULL, n1 + n2);
-    // printf("STRPLUS [%.*s] [%.*s]\n", (int) n1, &js->mem[off1], (int) n2,
-    //       &js->mem[off2]);
+    // printf("STRPLUS %u %u %u %u [%.*s] [%.*s]\n", n1, off1, n2, off2, (int)
+    // n1,
+    //       &js->mem[off1], (int) n2, &js->mem[off2]);
     if (vtype(res) == T_STR) {
       jsoff_t n, off = vstr(js, res, &n);
       memmove(&js->mem[off], &js->mem[off1], n1);

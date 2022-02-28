@@ -232,6 +232,8 @@ static void test_strings(void) {
   assert(ev(js, "a=!a;a", "false"));
   assert(ev(js, "!123", "false"));
   assert(ev(js, "!0", "true"));
+  assert(ev(js, "let r=''; r+='x'; r+='y'; r", "\"xy\""));
+  assert(ev(js, "let i=0;r=''; while(i<2) { r+='x'; i++; } r", "\"xx\""));
 }
 
 static void test_flow(void) {
