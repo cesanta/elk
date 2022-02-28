@@ -1009,9 +1009,10 @@ static jsval_t js_obj_literal(struct js *js) {
 }
 
 static jsval_t js_func_literal(struct js *js) {
-  jsoff_t pos = js->pos;
+  jsoff_t pos;
   uint8_t flags = js->flags;  // Save current flags
   if (nexttok(js) != TOK_LPAREN) return js_err(js, "parse error");
+  pos = js->pos - 1;
   for (bool expect_ident = false; nexttok(js) != TOK_EOF; expect_ident = true) {
     if (expect_ident && js->tok != TOK_IDENTIFIER)
       return js_err(js, "parse error");
@@ -1027,7 +1028,7 @@ static jsval_t js_func_literal(struct js *js) {
   if (is_err(res)) return res;        // But fail short on parse error
   js->flags = flags;                  // Restore flags
   jsval_t str = js_mkstr(js, &js->code[pos], js->pos - pos);
-  // printf("FUNC: %u [%.*s]\n", pos, js->pos - pos, &js->code[pos]);
+  printf("FUNC: %u [%.*s]\n", pos, js->pos - pos, &js->code[pos]);
   return mkval(T_FUNC, vdata(str));
 }
 

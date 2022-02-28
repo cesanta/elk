@@ -403,6 +403,8 @@ static void test_funcs(void) {
   js_eval(js, "f=function(){return 1;};", ~0);
   assert(ev(js, "f();", "1"));
   assert(ev(js, "f() + 2;", "3"));
+
+  assert(ev(js, "f=function (x){return x+1;}; f(1);", "2"));
 }
 
 static void test_bool(void) {
