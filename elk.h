@@ -15,6 +15,7 @@
 // license, please contact us at https://cesanta.com/contact.html
 
 #pragma once
+#include <stddef.h>
 #include <stdint.h>
 
 #define JS_VERSION "2.2.0"
