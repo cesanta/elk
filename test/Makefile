@@ -15,7 +15,7 @@ define build
   $1 $4
 endef
 
-all: test test++ vc2017 linux mingw elk
+all: test test++ vc2017 vc22 linux mingw elk
 
 test:
 	$(call build,,$(CC),$(CFLAGS) -o ut,$(RUN) ./ut)
@@ -25,6 +25,9 @@ test++:
 
 vc2017:
 	$(call build,$(DOCKER) mdashnet/vc2017 wine64,cl,/nologo /W3 /O2 /I. $(EXTRA) /Feut.exe,ut.exe)
+
+vc22:
+	$(call build,$(DOCKER) mdashnet/vc22 wine64,cl,/nologo /W3 /O2 /MD /I. $(EXTRA) /Feut.exe,ut.exe)
 
 linux:
 	$(call build,$(DOCKER) mdashnet/cc2,$(CC), $(CFLAGS) -o ut,./ut)

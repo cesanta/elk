@@ -88,6 +88,8 @@ static void test_errors(void) {
   assert(ev(js, "yield", "ERROR: 'yield' not implemented"));
   assert(ev(js, "@", "ERROR: parse error"));
   assert(ev(js, "$", "ERROR: '$' not found"));
+  assert(ev(js, "let a=0; a+=x;a", "ERROR: 'x' not found"));
+  assert(ev(js, "let b=0,i=0; while (i++<2) b+=x; b", "ERROR: 'x' not found"));
 }
 
 static void test_basic(void) {

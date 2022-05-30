@@ -820,7 +820,7 @@ static jsval_t call_c(struct js *js, const char *fn, int fnlen, jsoff_t fnoff) {
   //printf("  TYPE %d RES: %" PRIxPTR " %g %p\n", type, res.v, res.d, res.p);
   // Import return value into JS
   switch (fn[0]) {
-    case 'p': return tov(res.w);
+    case 'p': return tov((double)res.w);
     case 'i': return tov((int) res.u64);
     case 'd': return tov(res.d);
     case 'b': return mkval(T_BOOL, res.w ? 1 : 0);
@@ -1028,7 +1028,7 @@ static jsval_t js_func_literal(struct js *js) {
   if (is_err(res)) return res;        // But fail short on parse error
   js->flags = flags;                  // Restore flags
   jsval_t str = js_mkstr(js, &js->code[pos], js->pos - pos);
-  printf("FUNC: %u [%.*s]\n", pos, js->pos - pos, &js->code[pos]);
+  // printf("FUNC: %u [%.*s]\n", pos, js->pos - pos, &js->code[pos]);
   return mkval(T_FUNC, vdata(str));
 }
 
@@ -1200,8 +1200,9 @@ static jsval_t js_while(struct js *js) {
   bool cond_true = js_truthy(js, cond);
   if (exe) js->flags |= F_LOOP | (cond_true ? 0 : F_NOEXEC);
   jsval_t res = js_block_or_stmt(js);
+  if (is_err(res)) return res;
   // printf("WHILE 2 %d %d\n", cond_true, js->flags);
-  bool repeat = exe && !is_err(res) && cond_true && !(js->flags & F_BREAK);
+  bool repeat = exe && cond_true && !(js->flags & F_BREAK);
   js->flags = flags;          // Restore flags
   if (repeat) js->pos = pos;  // Must loop. Jump back!
   // printf("WHILE %d\n", js_usage(js));
