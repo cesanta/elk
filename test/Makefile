@@ -33,7 +33,7 @@ linux:
 	$(call build,$(DOCKER) mdashnet/cc2,$(CC), $(CFLAGS) -o ut,./ut)
 
 mingw:
-	$(call build,$(DOCKER) mdashnet/mingw,i686-w64-mingw32-gcc,-W -Wall $(EXTRA) -o ut,wine ut)
+	$(call build,$(DOCKER) mdashnet/mingw,x86_64-w64-mingw32-gcc,-W -Wall $(EXTRA) -o ut,wine ut)
 
 arduino:
 	curl -s http://downloads.arduino.cc/arduino-1.8.13-linux64.tar.xz -o /tmp/a.tgz
