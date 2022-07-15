@@ -327,6 +327,12 @@ static void js_fixup_offsets(struct js *js, jsoff_t start, jsoff_t size) {
     if (v & GCMASK) continue;  // To be deleted, don't bother
     if ((v & 3) != T_OBJ && (v & 3) != T_PROP) continue;
     if (v > start) saveoff(js, off, v - size);
+
+    if ((v & 3) == T_OBJ) {
+      jsoff_t u = loadoff(js, off + sizeof(jsoff_t));
+      if (u > start) saveoff(js, off + sizeof(jsoff_t), u - size);
+    }
+
     if ((v & 3) == T_PROP) {
       jsoff_t koff = loadoff(js, off + sizeof(off));
       if (koff > start) saveoff(js, off + sizeof(off), koff - size);

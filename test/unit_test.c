@@ -276,31 +276,6 @@ static void test_flow(void) {
   assert(ev(js, "a=0; if (0) a=1; else if (1) a=2; a;", "2"));
   assert(ev(js, "a=0; if (0){7;a=1;}else if (1){7;a=2;} a;", "2"));
   assert(ev(js, "a=0; if(0){7;a=1;}else if(0){5;a=2;}else{3;a=3;} a;", "3"));
-
-#if 0
-  {
-    clock_t a = clock();
-    const char *code =
-        "a=0;b=''; let f = function(){return 'x';}; while (a++<99999)"
-        "{b+=f(); if (b.length > 50) b='';} 42;";
-    ev(js, code, "42");
-    double ms = (double) (clock() - a) * 1000 / CLOCKS_PER_SEC;
-    printf("done in %g ms\n", ms);
-  }
-#endif
-
-#if 0
-  // Ternary operator
-  assert(ev(js, "1?2:3", "2"));
-  assert(ev(js, "0?2:3", "3"));
-  assert(ev(js, "0?1+1:1+2", "3"));
-  assert(ev(js, "a=0?1+1:1+2", "3"));
-  assert(ev(js, "a", "3"));
-  assert(ev(js, "a=b=0; a=b=0?1+1:1+2", "3"));
-  assert(ev(js, "a=0?1+1:1+2; a++; a", "4"));
-  assert(ev(js, "a=0; 0?a++:a--; a", "-1"));
-  assert(ev(js, "a=1?2:0?3:4", "2"));
-#endif
 }
 
 static void test_scopes(void) {
@@ -448,6 +423,11 @@ static void test_gc(void) {
             "let f=function(){let n=0; while (n++ < "
             "100){prnt(str(0,n)+'\\n');} return n;}; f()",
             "101"));
+
+  assert(ev(js,
+            "let fn=function(x) {let i=0; while(i<x) {res=res+'x'; i++; } };"
+            "let res=' 123 '; fn(3); res === ' 123 xxx'",
+            "true"));
 }
 
 static const char *hi(void) {
@@ -608,6 +588,18 @@ static void test_ternary(void) {
   assert(ev(js, "f(4)", "24"));
   assert(ev(js, "f(5)", "120"));
   assert(ev(js, "f(10)", "3628800"));
+
+  // Ternary operator
+  assert(ev(js, "1?2:3", "2"));
+  assert(ev(js, "0?2:3", "3"));
+  assert(ev(js, "0?1+1:1+2", "3"));
+  assert(ev(js, "let a,b=0?1+1:1+2; b", "3"));
+  assert(ev(js, "a=b=0; a=b=0?1+1:1+2", "3"));
+#if 0
+  assert(ev(js, "a=0?1+1:1+2; a", "3"));
+  assert(ev(js, "a=0; 0?a++:a--; a", "-1"));
+  assert(ev(js, "a=1?2:0?3:4", "2"));
+#endif
 }
 
 int main(void) {
