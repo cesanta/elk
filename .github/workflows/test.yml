@@ -5,25 +5,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: make
-      run: make -C test test test++ elk EXTRA="-lm"
+    - run: make -C test test test++ elk
   MacOS:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v2
-    - name: make
-      run: make -C test test++ elk upload-coverage
+    - run: make -C test test++ elk upload-coverage
   Windows:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: vc2017
-      run: make -C test vc2017
-    - name: mingw
-      run: make -C test mingw
+    - run: make -C test vc2017 mingw vc22
   ArduinoUno:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: uno
-      run: make -C test uno
+    - run: make -C test uno

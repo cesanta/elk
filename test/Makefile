@@ -1,4 +1,9 @@
-CFLAGS ?= -W -Wall -Werror -Wno-deprecated -I.. -g -fsanitize=address,undefined -coverage -lm $(EXTRA)
+ASAN ?= -fsanitize=address,undefined -fno-sanitize-recover=all
+CFLAGS ?= -W -Wall -Wextra -Werror -Wno-deprecated -I.. \
+          -Wundef -Wshadow -Wdouble-promotion \
+          -Wformat-truncation -fno-common -Wconversion \
+          -g3 -Os -ffunction-sections -fdata-sections \
+          $(ASAN) -coverage -lm $(EXTRA)
 CWD ?= $(realpath $(CURDIR))
 ROOT ?= $(realpath $(CURDIR)/..)
 DOCKER = docker run $(DA) --rm -e WINEDEBUG=-all -v $(ROOT):$(ROOT) -w $(CWD)
@@ -15,7 +20,12 @@ define build
   $1 $4
 endef
 
-all: test test++ vc2017 vc22 linux mingw elk
+all: test test++ vc2017 vc22 linux mingw elk uno
+
+valgrind: ASAN =
+valgrind: RUN = valgrind --tool=memcheck --gen-suppressions=all --leak-check=full --show-leak-kinds=all --leak-resolution=high --track-origins=yes --error-exitcode=1 --exit-on-first-error=yes
+valgrind:
+	$(call build,,$(CC),$(CFLAGS) -o ut,$(RUN) ./ut)
 
 test:
 	$(call build,,$(CC),$(CFLAGS) -o ut,$(RUN) ./ut)
@@ -45,9 +55,15 @@ uno: arduino
 	cp ../elk.c ../elk.h tmp/
 	$(DOCKER) mdashnet/cc2 ./arduino/arduino --verify --board arduino:avr:nano tmp/tmp.ino
 
+CMD ?= --verify
+esp32: arduino
+	rm -rf tmp; mkdir tmp; cp -r ../examples/Esp32JS/*.ino tmp/tmp.ino
+	cp -r ../examples/Esp32JS/*.[ch] ../elk.[ch] tmp/
+	./arduino/arduino $(CMD) --board esp32:esp32:esp32 tmp/tmp.ino
+#	$(DOCKER) mdashnet/cc2 ./arduino/arduino --verify --board esp32:esp32:esp32 tmp/tmp.ino
+
 elk:
 	$(CC) ../elk.c ../examples/cmdline/main.c -I.. -W -Wall -O2 -lm -o $(DESTDIR)/$@
-
 
 coverage: test
 	gcov -l -n *.gcno | sed '/^$$/d' | sed 'N;s/\n/ /'

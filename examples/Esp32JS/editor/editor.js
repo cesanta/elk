@@ -4,31 +4,16 @@ import {h, html, render, Router, useEffect, useRef, useState, useCallback} from 
 const DEFAULT_CODE = `// To start, flash this ESP32 Arduino firmware:
 // https://github.com/cesanta/elk/blob/master/examples/Esp32JS/Esp32JS.ino
 
-let led = { pin: 2, on: false };  // LED state
-gpio.mode(led.pin, 2);            // Set LED pin to output mode
+let led = { pin: 26, on: false };  // LED state
+gpio.mode(led.pin, 2);             // Set LED pin to output mode
 
-let ledTimer = timer.create(1000, function() {  // Blink LED every second
-  led.on = !led.on;                             // Toggle LED state
-  gpio.write(led.pin, led.on);                  // Set LED voltage
-}, null);
-
-let broker = 'mqtt://broker.hivemq.com:1883';   // Our MQTT server
-let mqttConn = mqtt.connect(broker);            // Create MQTT connection
-mqtt.subscribe(mqttConn, 'elk/rx');             // Subscribe to 'elk/rx' topic
-
-// Handle incoming MQTT messages. Send a response with some stats.
-mqtt.setfn(function(topic, message) {
-  log('MQTT: ' + topic + ' -> ' + message);
-  let response = {ram: ram(), usage: usage(), received: message};
-  mqtt.publish(mqttConn, 'elk/tx', str(response));
-}, null);
-
-// Called when JS instance is destroyed
-let cleanup = function() {
-  log('Cleaning up C state...');
-  timer.delete(ledTimer);
-  mqtt.disconnect(mqttConn);
+let timer_fn = function() {
+  led.on = !led.on; 
+  gpio.write(led.pin, led.on);
+  log('hi!', 123);
 };
+
+let timer_id = timer.create(1000, 'timer_fn');
 `;
 
 const InfoPanel = function(props) {
@@ -45,7 +30,6 @@ const InfoPanel = function(props) {
         <ul>
           <li>${a(href, 'elk')} - a JS engine</li>
           <li>${a(href, 'mongoose')} - a networking library</li>
-          <li>${a(href, 'mjson')} - a JSON parser</li>
           <li>${a(href, 'Eps32JS')} - ESP32 firmware and this editor</li>
         </ul>
         <h5>C API imported to JS:</h5>

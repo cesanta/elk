@@ -11,8 +11,10 @@
 #include <WiFi.h>
 #include "JS.h"
 
-const char *ssid = "WIFI_NETWORK";
-const char *pass = "WIFI_PASSWORD";
+// const char *ssid = "WIFI_NETWORK";
+// const char *pass = "WIFI_PASSWORD";
+const char *ssid = "VMDF554B9";
+const char *pass = "Mp7wjmamPafa";
 
 void setup() {
   Serial.begin(115200);

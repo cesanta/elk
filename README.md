@@ -76,17 +76,19 @@ This demonstrates how JS code can import and call existing C functions:
 #include "elk.h"
 
 // C function that adds two numbers. Will be called from JS
-int sum(int a, int b) {
-  return a + b;
+jsval_t sum(struct js *js, jsval_t *args, int nargs) {
+  if (nargs != 2) return js_err(js, "2 args expected");
+  double a = js_getnum(args[0]);  // Fetch 1st arg
+  double b = js_getnum(args[1]);  // Fetch 2nd arg
+  return js_mknum(a + b);
 }
 
 int main(void) {
   char mem[200];
-  struct js *js = js_create(mem, sizeof(mem));  // Create JS instance
-  jsval_t v = js_import(js, sum, "iii");        // Import C function "sum"
-  js_set(js, js_glob(js), "f", v);              // Under the name "f"
-  jsval_t result = js_eval(js, "f(3, 4);", ~0); // Call "f"
-  printf("result: %s\n", js_str(js, result));   // result: 7
+  struct js *js = js_create(mem, sizeof(mem));      // Create JS instance
+  js_set(js, js_glob(js), "sum", js_mkfun(sum)));   // Import sum()
+  jsval_t result = js_eval(js, "sum(3, 4);", ~0);   // Call sum
+  printf("result: %s\n", js_str(js, result));       // result: 7
   return 0;
 }
 ```
@@ -146,6 +148,11 @@ $ xtensa-esp32-elf-gcc $CFLAGS elk.c -c elk.tmp
 $ xtensa-esp32-elf-objcopy --rename-section .text=.irom0.text elk.tmp elk.o
 ```
 
+Note: Elk uses `snprintf()` standard function to format numbers (double).
+On some architectures, for example AVR Arduino, that standard function does
+not support float formatting - therefore printing numbers may output nothing
+or `?` symbols.
+
 ## API reference
 
 ### js\_create()
@@ -199,121 +206,75 @@ The string is allocated in the "free" memory section. If there is no
 enough space there, an empty string is returned. The returned pointer
 is valid until the next `js_eval()` call.
 
-
-### js\_import()
+### js\_glob()
 
 ```c
-jsval_t js_import(struct js *js, uintptr_t funcaddr, const char *signature);
+jsval_t js_glob(struct js *);
 ```
 
-Import an existing C function with address `funcaddr` and signature `signature`.
-Return imported function, suitable for subsequent `js_set()`.
+Return global JS object, i.e. root namespace.
 
-- `js`: JS instance
-- `funcaddr`: C function address: `(uintptr_t) &my_function`
-- `signature`: specifies C function signature that tells how JS engine
-   should marshal JS arguments to the C function.
-	 First letter specifies return value type, following letters - parameters:
-   - `b`: a C `bool` type
-   - `d`: a C `double` type
-   - `i`: a C integer type: `char`, `short`, `int`, `long`
-   - `s`: a C string, a 0-terminated `char *`
-   - `j`: a `jsval_t`
-   - `m`: a current `struct js *`. In JS, pass `null`
-   - `p`: any C pointer
-   - `v`: valid only for the return value, means `void`
-
-The imported C function must satisfy the following requirements:
-
-- A function must have maximum 6 parameters
-- C `double` parameters could be only 1st or 2nd. For example, function
-  `void foo(double x, double y, struct bar *)` could be imported, but
-  `void foo(struct bar *, double x, double y)` could not
-- C++ functions must be declared as `extern "C"`
-- Functions with `float` params cannot be imported. Write wrappers with `double`
-
-Here are some example of the import specifications:
-- `int sum(int)` -> `js_import(js, (uintptr_t) sum, "ii")`
-- `double sub(double a, double b)` -> `js_import(js, (uintptr_t) sub, "ddd")`
-- `int rand(void)` -> `js_import(js, (uintptr_t) rand, "i")`
-- `unsigned long strlen(char *s)` -> `js_import(js, (uintptr_t) strlen, "is")`
-- `char *js_str(struct js *, js_val_t)` -> `js_import(js, (uintptr_t) js_str, "smj")`
-
-In some cases, C APIs use callback functions. For example, a timer C API could
-specify a time interval, a C function to call, and a function parameter. It is
-possible to marshal JS function as a C callback - in other words, it is
-possible to pass JS functions as C callbacks.
-
-A C callback function should take between 1 and 6 arguments. One of these
-arguments must be a `void *` pointer, that is passed to the C callback by the
-imported function. We call this `void *` parameter a "userdata" parameter.
-
-The C callback specification is enclosed into the square brackets `[...]`.
-In addition to the signature letters above, a new letter `u` is available
-that specifies userdata parameter. In JS, pass `null` for `u` param.
-Here is a complete example:
+### js\_set()
 
 ```c
-#include <stdio.h>
-#include "elk.h"
+void js_set(struct js *, jsval_t obj, const char *key, jsval_t val);
+```
 
-// C function that invokes a callback and returns the result of invocation
-int f(int (*fn)(int a, int b, void *userdata), void *userdata) {
-  return fn(1, 2, userdata);
-}
+Assign an attribute `key` in in object `obj` to value `val`.
 
-int main(void) {
-  char mem[500];
-  struct js *js = js_create(mem, sizeof(mem));
-  js_set(js, js_glob(js), "f", js_import(js, f, "i[iiiu]u"));
-  jsval_t v = js_eval(js, "f(function(a,b,c){return a + b;}, 0);", ~0);
-  printf("result: %s\n", js_str(js, v));  // result: 3
-  return 0;
+
+### js\_mk\*()
+
+```c
+jsval_t js_mkval(int type);     // Create undef, null, true, false
+jsval_t js_mkobj(struct js *);  // Create object
+jsval_t js_mkstr(struct js *, const void *, size_t);    // Create string
+jsval_t js_mknum(double);                               // Create number
+jsval_t js_mkerr(struct js *js, const char *fmt, ...);  // Create error
+jsval_t js_mkfun(jsval_t (*fn)(struct js *, int));      // Create func
+```
+
+Create JS values
+
+### js\_get\*()
+
+### js\_type()
+
+```c
+enum { JS_UNDEF, JS_NULL, JS_TRUE, JS_FALSE, JS_STR, JS_NUM, JS_ERR, JS_PRIV };
+int js_type(jsval_t val);  // Return JS value type
+```
+
+Return type of the JS value.
+
+## js\_checkargs()
+
+```c
+jsval_t js_checkargs(struct js *js, jsval_t *args, int nargs, const char *spec, ...);
+```
+
+A helper function that fetches JS arguments into C values, according to
+`spec` type specification. Return `JS_ERR` on error, or `JS_UNDEF` on success.
+Supported specifiers:
+- `b` for `bool`
+- `d` for `double`
+- `i` for `char`, `short`, `int`, `long`, and corresponding unsigned variants
+- `s` for `char *`
+- `j` for `jsval_t`
+
+Usage example - a C function that implements a JS function
+`greater_than(number1, number2)`:
+
+```c
+jsval_t js_gt(struct js *js, jsval_t *args, int nargs) {
+  double a, b;
+  jsval_t res = js_checkargs(js, args, nargs, "dd", &a, &b);
+  if (js_type(res) == JS_UNDEF) {
+    res = js_mkval(a > b ? JS_TRUE : JS_FALSE);
+  }
+  return res;
 }
 ```
-
-### js\_set(), js\_glob(), js\_mkobj(), js\_mknum(), js\_mkstr()
-
-```c
-jsval_t js_glob(struct js *);   // Return global object
-jsval_t js_mkobj(struct js *);  // Create a new object
-jsval_t js_mkstr(struct js *, const void *, size_t);  // Create a string
-jsval_t js_mknum(struct js *, double);                // Create a number
-void js_set(struct js *, jsval_t obj, const char *key, jsval_t val);  // Assign property to an object
-```
-
-These are helper functions for assigning properties to objects. The
-anticipated use case is to give names to imported C functions.
-
-Importing a C function `sum` into the global namespace:
-
-```c
-  jsval_t global_namespace = js_glob(js);
-  jsval_t imported_function = js_import(js, (uintptr_t) sum, "iii");
-  js_set(js, global_namespace, "f", imported_function);
-```
-
-Use `js_mkobj()` to create a dedicated object to hold groups of functions
-and keep a global namespace tidy. For example, all GPIO related functions
-can go into the `gpio` object:
-
-```c
-  jsval_t gpio = js_mkobj(js);              // Equivalent to:
-  js_set(js, js_glob(js), "gpio", gpio);    // let gpio = {};
-
-  js_set(js, gpio, "mode",  js_import(js, (uintptr_t) func1, "iii");  // Create gpio.mode(pin, mode)
-  js_set(js, gpio, "read",  js_import(js, (uintptr_t) func2, "ii");   // Create gpio.read(pin)
-  js_set(js, gpio, "write", js_import(js, (uintptr_t) func3, "iii");  // Create gpio.write(pin, value)
-```
-
-### js\_usage()
-
-```c
-int js_usage(struct js *);
-```
-
-Return memory usage percentage - a number between 0 and 100.
-
 
 ## LICENSE
 
