@@ -36,6 +36,8 @@
 typedef uint32_t jsoff_t;
 
 struct js {
+  jsoff_t css;        // Max observed C stack size
+  jsoff_t lwm;        // RAM low watermark: min free RAM observed
   const char *code;   // Currently parsed code snippet
   char errmsg[36];    // Error message placeholder
   uint8_t tok;        // Last parsed token value
@@ -55,7 +57,7 @@ struct js {
   uint8_t *mem;       // Available JS memory
   jsoff_t size;       // Memory size
   jsoff_t brk;        // Current mem usage boundary
-  jsoff_t lwm;        // RAM low watermark: min free RAM observed
+  void *cstk;         // C stack pointer at the beginning of js_eval()
 };
 
 // A JS memory stores diffenent entities: objects, properties, strings
@@ -163,9 +165,11 @@ static jsval_t js_stmt(struct js *js, uint8_t etok);
 static jsval_t do_op(struct js *, uint8_t op, jsval_t l, jsval_t r);
 
 static void setlwm(struct js *js) {
-  jsoff_t n = 0;
+  jsoff_t n = 0, css = 0;
   if (js->brk < js->size) n = js->size - js->brk;
   if (js->lwm > n) js->lwm = n;
+  css = (jsoff_t) ((char *) js->cstk - (char *) &n);
+  if (css > js->css) js->css = css;
 }
 
 // Copy src to dst, make no overflows, 0-terminate. Return bytes copied
@@ -774,6 +778,7 @@ static jsval_t do_logical_or(struct js *js, jsval_t l, jsval_t r) {
 static jsval_t do_op(struct js *js, uint8_t op, jsval_t lhs, jsval_t rhs) {
   jsval_t l = resolveprop(js, lhs), r = resolveprop(js, rhs);
   //printf("OP %d %d %d\n", op, vtype(lhs), vtype(r));
+  setlwm(js);
   if (is_assign(op) && vtype(lhs) != T_PROP) return js_mkerr(js, "bad lhs");
   switch (op) {
     case TOK_LAND:    return mkval(T_BOOL, js_truthy(js, l) && js_truthy(js, r) ? 1 : 0);
@@ -1243,6 +1248,7 @@ jsval_t js_eval(struct js *js, const char *buf, size_t len) {
   js->code = buf;
   js->clen = (jsoff_t) len;
   js->pos = 0;
+  js->cstk = &res;
   while (js->tok != TOK_EOF && !is_err(res)) {
     js->pos = skiptonext(js->code, js->clen, js->pos);
     if (js->pos >= js->clen) break;
@@ -1254,7 +1260,8 @@ jsval_t js_eval(struct js *js, const char *buf, size_t len) {
 #ifdef JS_DUMP
 void js_dump(struct js *js) {
   jsoff_t off = 0, v;
-  printf("JS size %u, brk %u\n", js->size, js->brk);
+  printf("JS size %u, brk %u, lwm %u, css %u\n", js->size, js->brk, js->lwm,
+         (unsigned) js->css);
   while (off < js->brk) {
     memcpy(&v, &js->mem[off], sizeof(v));
     printf(" %5u: ", off);
