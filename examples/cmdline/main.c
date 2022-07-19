@@ -32,7 +32,7 @@ static jsval_t js_print(struct js *js, jsval_t *args, int nargs) {
 }
 
 int main(int argc, char *argv[]) {
-  char mem[8192];
+  char mem[8192], dump = 0;
   struct js *js = s_js = js_create(mem, sizeof(mem));
   jsval_t res = js_mkval(JS_UNDEF);
 
@@ -41,11 +41,16 @@ int main(int argc, char *argv[]) {
 
   // Treat every argument as JS expressions. Execute all one by one
   for (int i = 1; i < argc; i++) {
-    res = js_eval(js, argv[i], ~0U);
+    if (strcmp(argv[i], "-d") == 0) {
+      dump++;
+    } else {
+      res = js_eval(js, argv[i], ~0U);
+    }
   }
 
   // Print the result of the last one
   printf("%s\n", js_str(js, res));
+  if (dump) js_dump(js);
 
   return EXIT_SUCCESS;
 }
