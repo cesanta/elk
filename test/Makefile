@@ -63,7 +63,7 @@ esp32: arduino
 #	$(DOCKER) mdashnet/cc2 ./arduino/arduino --verify --board esp32:esp32:esp32 tmp/tmp.ino
 
 elk:
-	$(CC) ../elk.c ../examples/cmdline/main.c -I.. -W -Wall -O2 -lm -o $(DESTDIR)/$@
+	$(CC) ../elk.c ../examples/cmdline/main.c -I.. -W -Wall -DJS_DUMP -O3 -lm -o $(DESTDIR)/$@
 
 coverage: test
 	gcov -l -n *.gcno | sed '/^$$/d' | sed 'N;s/\n/ /'
