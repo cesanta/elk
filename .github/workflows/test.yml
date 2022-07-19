@@ -4,20 +4,21 @@ jobs:
   Linux:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
+    - run: make -C test valgrind
     - run: make -C test test test++ elk
   MacOS:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v2
-    - run: make -C test test++ elk upload-coverage
+    - uses: actions/checkout@v3
+    - run: make -C test test++ elk upload-coverage ARCH_FLAGS=
   Windows:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - run: make -C test vc2017 mingw vc22
   ArduinoUno:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - run: make -C test uno

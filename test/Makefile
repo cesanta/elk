@@ -1,12 +1,12 @@
 ASAN ?= -fsanitize=address,undefined -fno-sanitize-recover=all
 CFLAGS ?= -W -Wall -Wextra -Werror -Wno-deprecated -I.. \
-          -Wundef -Wshadow -Wdouble-promotion \
-          -Wformat-truncation -fno-common -Wconversion \
+          -Wundef -Wshadow -Wdouble-promotion -fno-common -Wconversion \
           -g3 -Os -ffunction-sections -fdata-sections \
-          $(ASAN) -coverage -lm $(EXTRA)
+          $(ASAN) -coverage -lm $(ARCH_FLAGS) $(EXTRA_CFLAGS)
 CWD ?= $(realpath $(CURDIR))
 ROOT ?= $(realpath $(CURDIR)/..)
 DOCKER = docker run $(DA) --rm -e WINEDEBUG=-all -v $(ROOT):$(ROOT) -w $(CWD)
+ARCH_FLAGS ?= -Wformat-truncation 
 DESTDIR ?= .
 
 define clean
