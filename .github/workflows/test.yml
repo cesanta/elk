@@ -5,6 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - run: sudo apt-get update ; sudo apt-get install valgrind
     - run: make -C test valgrind
     - run: make -C test test test++ elk
   MacOS:
