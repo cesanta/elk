@@ -7,12 +7,12 @@ jobs:
     - uses: actions/checkout@v3
     - run: sudo apt-get update ; sudo apt-get install valgrind
     - run: make -C test valgrind
-    - run: make -C test test test++ elk
+    - run: make -C test test test++ elk EXTRA_CFLAGS=-DJS_DUMP=1
   MacOS:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v3
-    - run: make -C test test++ elk upload-coverage ARCH_FLAGS=
+    - run: make -C test test++ elk upload-coverage ARCH_FLAGS= EXTRA_CFLAGS=-DJS_DUMP=1
   Windows:
     runs-on: ubuntu-latest
     steps:
