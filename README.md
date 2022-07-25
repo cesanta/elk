@@ -204,42 +204,39 @@ is valid until the next `js_eval()` call.
 jsval_t js_glob(struct js *);
 ```
 
-Return global JS object, i.e. root namespace.
-
-### js\_set()
-
-```c
-void js_set(struct js *, jsval_t obj, const char *key, jsval_t val);
-```
-
-Assign an attribute `key` in in object `obj` to value `val`.
+Return global JS object, i.e. a root namespace.
 
 
 ### js\_mk\*()
 
 ```c
-jsval_t js_mkval(int type);     // Create undef, null, true, false
-jsval_t js_mkobj(struct js *);  // Create object
-jsval_t js_mkstr(struct js *, const void *, size_t);    // Create string
-jsval_t js_mknum(double);                               // Create number
-jsval_t js_mkerr(struct js *js, const char *fmt, ...);  // Create error
-jsval_t js_mkfun(jsval_t (*fn)(struct js *, int));      // Create func
+jsval_t js_mkundef(void);  // Create undefined
+jsval_t js_mknull(void);   // Create null, null, true, false
+jsval_t js_mktrue(void);   // Create true
+jsval_t js_mkfalse(void);  // Create false
+jsval_t js_mkstr(struct js *, const void *, size_t);           // Create string
+jsval_t js_mknum(double);                                      // Create number
+jsval_t js_mkerr(struct js *js, const char *fmt, ...);         // Create error
+jsval_t js_mkfun(jsval_t (*fn)(struct js *, jsval_t *, int));  // Create func
+jsval_t js_mkobj(struct js *);                                 // Create object
+void js_set(struct js *, jsval_t, const char *, jsval_t);      // Set obj attr
 ```
 
-Create JS values
+Create JS values from C values
 
 ### js\_get\*()
 
-### js\_type()
-
 ```c
 enum { JS_UNDEF, JS_NULL, JS_TRUE, JS_FALSE, JS_STR, JS_NUM, JS_ERR, JS_PRIV };
-int js_type(jsval_t val);  // Return JS value type
+int js_type(jsval_t val);       // Return JS value type
+double js_getnum(jsval_t val);  // Get number
+int js_getbool(jsval_t val);    // Get boolean, 0 or 1
+char *js_getstr(struct js *js, jsval_t val, size_t *len);  // Get string
 ```
 
-Return type of the JS value.
+Extract C values from JS values
 
-## js\_checkargs()
+### js\_checkargs()
 
 ```c
 jsval_t js_checkargs(struct js *js, jsval_t *args, int nargs, const char *spec, ...);
@@ -250,7 +247,7 @@ A helper function that fetches JS arguments into C values, according to
 Supported specifiers:
 - `b` for `bool`
 - `d` for `double`
-- `i` for `char`, `short`, `int`, `long`, and corresponding unsigned variants
+- `i` for `char`, `short`, `int`, and corresponding unsigned variants
 - `s` for `char *`
 - `j` for `jsval_t`
 
@@ -262,11 +259,37 @@ jsval_t js_gt(struct js *js, jsval_t *args, int nargs) {
   double a, b;
   jsval_t res = js_checkargs(js, args, nargs, "dd", &a, &b);
   if (js_type(res) == JS_UNDEF) {
-    res = js_mkval(a > b ? JS_TRUE : JS_FALSE);
+    res = a > b ? js_mktrue() : js_mkfalse();
   }
   return res;
 }
 ```
+
+### js\_setmaxcss()
+
+```c
+void js_setmaxcss(struct js *, size_t max);
+```
+
+Set maximum allowed C stack size usage
+
+### js\_stats()
+
+```c
+void js_stats(struct js *, size_t *total, size_t *min, size_t *cstacksize);
+```
+
+Return resource usage statistics: `total` for total usable JS memory, `min`
+for the lowest free JS memory observed (low watermark), and `cstacksize` for
+the largest C stack usage observed.
+
+### js\_dump()
+
+```c
+void js_dump(struct js *);
+```
+
+Print debug info about the current JS state to stdout. Requires `-DJS_DUMP`
 
 ## LICENSE
 
