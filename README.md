@@ -7,17 +7,16 @@
 
 Elk is a tiny embeddable JavaScript engine that implements a small but usable
 subset of ES6. It is designed for microcontroller development. Instead of
-writing firmware code in C/C++, Elk allows to develop in JavaScript. 
-Another use case is providing customers with a secure, protected scripting
-environment for product customisation.
+writing firmware code entirely in C/C++, Elk allows to add JavaScript
+customisations to the firmware developed in C - which is a great way to let
+customers to extend/customise device functionality.
 
 Elk features include:
 
 - Cross platform. Works anywhere from 8-bit microcontrollers to 64-bit servers
 - Zero dependencies. Builds cleanly by ISO C or ISO C++ compilers
 - Easy to embed: just copy `elk.c` and `elk.h` to your source tree
-- Very small and simple embedding API
-- Can call native C/C++ functions from JavaScript and vice versa
+- Small and simple embedding API
 - Does not use malloc. Operates with a given memory buffer only
 - Small footprint: about 20KB on flash/disk, about 100 bytes RAM for core VM
 - No bytecode. Interprets JS code directly
@@ -32,10 +31,8 @@ Below is a demonstration on a classic Arduino Nano board which has
 
 The [Esp32JS](examples/Esp32JS) Arduino sketch is an example of Elk integration
 with ESP32. Flash this sketch on your ESP32 board, go to http://elk-js.com,
-and get a JavaScript development environment instantly! Reloading your script
-takes a fraction of a second - compare that with a regular reflashing.. Also,
-refreshing the JS code automatically cleans up all previously allocated C
-resources.  Here how it looks like:
+and get a JavaScript development environment instantly! All components,
+including ESP32 firmware and Web editor, are open.  Here how it looks like:
 
 ![](test/editor.png)
 
