@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Cesanta Software Limited
+// Copyright (c) 2021-2022 Cesanta Software Limited
 // All rights reserved
 //
 // This Arduino sketch demonstrates "elk" JavaScript library integration:
@@ -11,10 +11,8 @@
 #include <WiFi.h>
 #include "JS.h"
 
-// const char *ssid = "WIFI_NETWORK";
-// const char *pass = "WIFI_PASSWORD";
-const char *ssid = "VMDF554B9";
-const char *pass = "Mp7wjmamPafa";
+const char *ssid = "WIFI_NETWORK";
+const char *pass = "WIFI_PASSWORD";
 
 void setup() {
   Serial.begin(115200);

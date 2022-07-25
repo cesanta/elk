@@ -7,26 +7,21 @@ select, input, label::before, textarea {
   outline: none; box-shadow:none !important; 
   border: 1px solid #ccc !important; 
 }
-::-webkit-scrollbar { background: transparent; width: 0; }
-body { -ms-overflow-style: none; scrollbar-width: none; }
 
-.xfa {width: 0.75em !important;}
 .noselect { user-select: none; }
 .dropdown-item { cursor: pointer; }
 .bg-lavender { background-color: #e6e6fa; }
 .vh-100 { height: 100vh; }
 
+.split { display: flex; width: 100%; height: 100%; box-sizing: border-box; }
+.split>* { overflow: auto; -webkit-overflow-scrolling: touch; }
+.split-horizontal { flex-direction: row; }
+.split-vertical { flex-direction: column; }
+.split-divider { flex: 0 0 11px; overflow: hidden; user-select: none; -webkit-user-drag: none; -webkit-tap-horizontalighlight-color: transparent; background: no-repeat center center; background-color: #eee; }
+.split-horizontal > .split-divider { cursor: col-resize; touch-action: pan-y; background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIiDjrELjpo5aiZeMwF+yNnOs5KSvgAAAABJRU5ErkJggg=="); }
+.split-vertical > .split-divider { cursor: row-resize; touch-action: pan-x; background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAFCAMAAABl/6zIAAAABlBMVEUAAADMzMzIT8AyAAAAAXRSTlMAQObYZgAAABRJREFUeAFjYGRkwIMJSeMHlBkOABP7AEGzSuPKAAAAAElFTkSuQmCC"); }
 
-.CodeMirror {
-  font-size: 14px;
-  font-family: Menlo, Consolas, monospace;
-  border-radius: 0 !important;
-  height: 100% !important;
-  max-height: 100% !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  overflow: auto !important;
-}
+.CodeMirror { height: 100%; font-size: 14px; }
 .CodeMirror-selected { background: #ccc !important; }
 .CodeMirror pre { background: transparent !important; }
 

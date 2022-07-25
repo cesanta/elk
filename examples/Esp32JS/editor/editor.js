@@ -1,30 +1,73 @@
 'use strict';
 import {h, html, render, Router, useEffect, useRef, useState, useCallback} from './preact-bundle.min.js';
 
-const DEFAULT_CODE = `// To start, flash this ESP32 Arduino firmware:
+const DEFAULT_CODE =
+    `// To start, flash this ESP32 Arduino firmware, enter IP address and click connect:
 // https://github.com/cesanta/elk/blob/master/examples/Esp32JS/Esp32JS.ino
 
-let led = { pin: 26, on: false };  // LED state
-gpio.mode(led.pin, 2);             // Set LED pin to output mode
+let led = { pin: 26, on: 0 };  // LED state
+gpio.mode(led.pin, 2);         // Set LED pin to output mode
 
 let timer_fn = function() {
-  led.on = !led.on; 
+  led.on = led.on ? 0 : 1; 
   gpio.write(led.pin, led.on);
-  log('hi!', 123);
 };
 
+// Start a timer that toggles LED every 1000 milliseconds
+// This timer is a C resource. It is cleaned automatically on JS code refresh
 let timer_id = timer.create(1000, 'timer_fn');
 `;
+
+const clamp = (x, min, max) => Math.max(Math.min(x, max), min).toFixed(2);
+export const Split = ({vertical, children, startSize = 50, minSize = 10}) => {
+  if (children.length !== 2) throw 'Split expects exactly 2 child panes';
+  const layout = useRef(null);
+  const divider = useRef(null);
+  const resizing = useRef(null);
+  const [size, setSize] = useState(startSize);
+  const onMouseDown = (e) => (resizing.current = e.target);
+  const handleMouseUp = (e) => (resizing.current = null);
+  const handleMouseMove = (e) => {
+    if (!resizing.current || !divider.current || !layout.current) return;
+    const layoutRect = layout.current.getBoundingClientRect();
+    const splitterRect = divider.current.getBoundingClientRect();
+    let totalSize = vertical ? layoutRect.height : layoutRect.width;
+    let splitterSize = vertical ? splitterRect.height : splitterRect.width;
+    let offset =
+        (vertical ? e.clientY - layoutRect.top : e.clientX - layoutRect.left) -
+        2;
+    let secondaryPaneSize = clamp(
+        ((totalSize - splitterSize - offset) * 100) / totalSize, minSize,
+        100 - minSize);
+    setSize(100 - secondaryPaneSize);
+    // console.log(secondaryPaneSize);
+  };
+  useEffect(() => {
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, []);
+
+  return html`
+      <div class="split split-${vertical ? 'vertical' : 'horizontal'}"
+        ref=${layout}>
+        <div style="flex: 0 0 ${size}%">${children[0]}</div>
+        <div class="split-divider" onMouseDown=${onMouseDown} ref=${divider} />
+        <div style="flex: 1 1 ${100 - size}%"> ${children[1]}</div>
+      </div>`;
+};
 
 const InfoPanel = function(props) {
   const href = 'https://github.com/cesanta/elk'
   const a = (href, title) => html`<a target="_blank" href=${href}>${title}</a>`;
   return html`
-    <${Panel} type="width" value="33%" class="bg-light ${props.class}">
-      <div class="m-2 text-muted">
+      <div class="m-2 text-muted overflow-auto mh-100">
         <p>
-          This editor lets you develop ESP32 firmware
-          in JavaScript. All components are open source: 
+          This editor lets you customise ESP32 firmware
+          with JavaScript. All components are open source: 
         </p>
 
         <ul>
@@ -39,24 +82,13 @@ const InfoPanel = function(props) {
           <li>gpio.read(pin) - read pin state</li>
           <li>timer.create(milli, func, null) - create timer</li>
           <li>timer.delete(timerID) - delete timer</li>
-          <li>mqtt.connect(url) - MQTT connect</li>
-          <li>mqtt.disconnect(conn) - MQTT disconnect</li>
-          <li>mqtt.publish(conn, topic, msg) - publish</li>
-          <li>mqtt.subscribe(conn, topic) - subscribe</li>
-          <li>mqtt.setfn(func,null) - set MQTT handler</li>
-          <li>str(val) - stringify JS value</li>
-          <li>usage() - JS mem usage in %</li>
-          <li>ram() - current free RAM in bytes</li>
           <li>log(strval) - log a message</li>
-          <li>eval(strval) - execute code</li>
         </ul>
 
         <p>
           Refer to <a href="https://github.com/cesanta/elk/blob/master/examples/Esp32JS/JS.h">JS.h</a> for implementation details.
         </p>
-      </div>
-    </${Panel}>
-  `;
+      </div>`;
 };
 
 const getCookie = function(name) {
@@ -116,7 +148,7 @@ const rpc = (url, ps) => new Promise(function(resolve, reject) {
     try {
       const msg = JSON.parse(ev.data)
       ps.pub('ws', msg);
-      if (msg.id) ps.pub(`rpc-${msg.id}`, msg);
+      if ('id' in msg) ps.pub(`rpc-${msg.id}`, msg);
     } catch (e) {
       console.log('Invalid ws frame:', e, ev.data);
     }
@@ -170,27 +202,6 @@ const Button = function(props) {
     </button>`;
 };
 
-const Panel = function(props) {
-  const [attr, setAttr] = useState(props.value);
-  const toggleAttr = ev => setAttr(attr ? 0 : props.value);
-  const w = props.type == 'width';
-  const style = `transform: translate(${w ? '-100%,0' : '0,-100%'});`;
-  const border = `border-${w ? 'left' : 'top'}: 1px solid #ccc`;
-  const handles = [['angle-right', 'angle-left'], ['angle-down', 'angle-up']];
-  const handle = handles[w ? 0 : 1][attr ? 0 : 1];
-  return html`
-    <div class="${props.class}"
-      style="${props.type}: ${attr}; ${border};
-      transition: ${props.type} 0.3s ease-in-out;">
-      <div class="position-absolute bg-warning" 
-        style="${style} z-index: 99; cursor: pointer;">
-        <i class="fa fa-fw fa-bold fa-${handle}" onClick=${toggleAttr} />
-      </div>
-      ${props.children}
-    </div>
-  `;
-};
-
 const autoscroll = (el) => {
   const sh = el.scrollHeight, ch = el.clientHeight, max = sh - ch;
   el.scrollTop = max > 0 ? max : 0;
@@ -214,18 +225,18 @@ const LogPanel = function(props) {
   };
   const onenable = ev => setEnableAutoscroll(!enableAutoscroll);
   return html`
-    <${Panel} type="height" value="300px" class=${props.class}>
+    <div class="mh-100 w-100">
       <div class="position-absolute text-muted d-flex" style="right: 0;">
-        <div class="custom-control custom-checkbox mr-2 mt-2 d-none">
+        <div class="custom-control custom-checkbox mr-2 mt-2">
           <input type="checkbox" class="custom-control-input" id="cb1"
             onchange=${onenable} checked=${enableAutoscroll} />
           <label class="custom-control-label" for="cb1">autoscroll</label>
         </div>
-        <a href="#" class="py-0 m-2"
-          onclick=${onclear} > clear logs </a>
+        <button class="btn btn-sm btn-primary py-0 m-2"
+          onclick=${onclear}> clear logs </button>
       </div>
-      <pre class="m-2 small" ref=${pre}>${text}</pre>
-    </${Panel}>
+      <pre class="m-2 small h-100 overflow-auto" ref=${pre}>${text}</pre>
+    </div>
   `;
 };
 
@@ -274,21 +285,10 @@ const Toolbar = function(props) {
         <div class="flex-grow-1" />
         <div class="text-light">
           <img src="elk.svg" height="32" class="round mr-2" />
-          Elk JS, 
-          \u00a9 2021 Cesanta. <a 
+          Elk JS, \u00a9 2021-2022 Cesanta. <a 
             href="https://cesanta.com/contact.html">Contact us</a>
         </div>
     </nav>
-  `;
-};
-
-const Main = function(props) {
-  return html`
-    <div class=${props.class}>
-      <${Editor} class="flex-grow-1" ps=${props.ps}
-        defaultValue=${props.code} onChange=${x => props.setCode(x)}/>
-      <${InfoPanel} class="overflow-auto h-100 vh-100" />
-    </div>
   `;
 };
 
@@ -301,16 +301,23 @@ const App = function(props) {
     const id = ps.sub('offline', () => setOnline(false));
     return () => ps.del(id);
   }, []);
+
   return html`
-    <div class="d-flex flex-column position-absolute vh-100 h-100 w-100">
+    <div class="d-flex flex-column h-100 w-100">
       <${Toolbar} online=${online} setOnline=${setOnline}
         setRPC=${setRPC} rpc=${rpc} ps=${ps} code=${code}
         class="navbar bg-dark form-inline" />
-      <${Main} code=${code} setCode=${setCode} ps=${ps}
-        class="d-flex flex-grow-1 overflow-auto" />
-      <${LogPanel} class="overflow-auto" ps=${ps} />
-    </div>
-  `;
+      <div class="flex-grow-1 flex-fill">
+        <${Split} startSize="70" vertical="true">
+          <${Split} startSize="65">
+            <${Editor} ps=${ps} defaultValue=${code} class="w-100 h-100"
+              onChange=${x => setCode(x)}/>
+            <${InfoPanel} class="overflow-auto h-100 vh-100" />
+          <//>
+          <${LogPanel} ps=${ps} />
+        <//>
+      </div>
+    </div>`;
 };
 
 window.onload = () => render(h(App), document.body);

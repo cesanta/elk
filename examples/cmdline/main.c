@@ -28,13 +28,13 @@ static jsval_t js_print(struct js *js, jsval_t *args, int nargs) {
     printf("%s%s", space, js_str(js, args[i]));
   }
   putchar('\n');  // Finish by newline
-  return js_mkval(JS_UNDEF);
+  return js_mkundef();
 }
 
 int main(int argc, char *argv[]) {
   char mem[8192], dump = 0;
   struct js *js = s_js = js_create(mem, sizeof(mem));
-  jsval_t res = js_mkval(JS_UNDEF);
+  jsval_t res = js_mkundef();
 
   // Implement `print` function
   js_set(js, js_glob(js), "print", js_mkfun(js_print));

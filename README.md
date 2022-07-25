@@ -33,24 +33,14 @@ Below is a demonstration on a classic Arduino Nano board which has
 The [Esp32JS](examples/Esp32JS) Arduino sketch is an example of Elk integration
 with ESP32. Flash this sketch on your ESP32 board, go to http://elk-js.com,
 and get a JavaScript development environment instantly! Reloading your script
-takes a fraction of a second - compare that with a regular reflashing..
-Here how it looks like:
+takes a fraction of a second - compare that with a regular reflashing.. Also,
+refreshing the JS code automatically cleans up all previously allocated C
+resources.  Here how it looks like:
 
 ![](test/editor.png)
 
-The example JS firmware implements:
-- Blinks an LED periodically
-- Connects to the [HiveMQ](http://www.hivemq.com/demos/websocket-client/)
-  MQTT server
-- Subscribes to the `elk/rx` topic
-- When an MQTT message is received, sends some stats to the `elk/tx` topic:
-
-
-That's screenshot is taken from the MQTT server which shows that we sent
-a `hello JS!` message and received stats in response:
-
-![](test/mqtt.png)
-
+The example JS firmware implements a classic blinky that uses timers imported
+from C.
 
 
 ## Call JavaScript from C
@@ -98,8 +88,9 @@ int main(void) {
 - Operations: all standard JS operations except:
    - `!=`, `==`. Use strict comparison `!==`, `===`
    - No computed member access `a[b]`
+   - No exponentiation operation `a ** b`
 - Typeof: `typeof('a') === 'string'`
-- While: `while (...) { ... }`
+- For loop: `for (...;...;...)  ...`
 - Conditional: `if (...) ... else ...`
 - Ternary operator `a ? b : c`
 - Simple types: `let a, b, c = 12.3, d = 'a', e = null, f = true, g = false;`
@@ -111,7 +102,7 @@ int main(void) {
 ## Not supported features
 
 - No `var`, no `const`. Use `let` (strict mode only)
-- No `do`, `switch`, `for`. Use `while`
+- No `do`, `switch`, `while`. Use `for`
 - No `=>` functions. Use `let f = function(...) {...};`
 - No arrays, closures, prototypes, `this`, `new`, `delete`
 - No standard library: no `Date`, `Regexp`, `Function`, `String`, `Number`
@@ -123,10 +114,11 @@ used in a performance-critical scenarios. For example, below are the numbers
 for a simple loop code on a different architectures.
 
 ```javascript
-let a = 0;        // 97 milliseconds on a 16Mhz 8-bit Atmega328P (Arduino Uno and alike)
-while (a < 100)   // 16 milliseconds on a 48Mhz SAMD21
-  a++;            //  5 milliseconds on a 133Mhz Raspberry RP2040
-                  //  2 milliseconds on a 240Mhz ESP32
+for (let i = 0; i < 100; i++) true;
+// 97 milliseconds on a 16Mhz 8-bit Atmega328P (Arduino Uno and alike)
+// 16 milliseconds on a 48Mhz SAMD21
+//  5 milliseconds on a 133Mhz Raspberry RP2040
+//  2 milliseconds on a 240Mhz ESP32
 ```
 
 ## Build options

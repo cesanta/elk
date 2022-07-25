@@ -18,25 +18,38 @@ static struct mg_mgr s_mgr;  // Mongoose event manager
 // the JS, we insert a "deallocation descriptor", struct resource, to the list
 // s_rhead.
 struct resource {
-  void *data;               // Resource data
-  void (*cleanup)(void *);  // Cleanup function
   struct resource *next;    // Next resource
+  void (*cleanup)(void *);  // Cleanup function
+  void *data;               // Resource data
 };
 static struct resource *s_rhead;  // Allocated C resources
 
 static void addresource(void (*fn)(void *), void *data) {
-  struct resource *r = (struct resource *) calloc(1, sizeof(r));
-  r->data = (void *) data;
+  struct resource *r = (struct resource *) calloc(1, sizeof(*r));
+  r->data = data;
   r->cleanup = fn;
   r->next = s_rhead;
   s_rhead = r;
+  MG_INFO(("added r=%p, data=%p, cleanup=%p", r, r->data, r->cleanup));
 }
 
 static void delresource(void (*fn)(void *), void *data) {
   struct resource **head = &s_rhead, *r;
   while (*head && (*head)->cleanup != fn && (*head)->data != data)
     head = &(*head)->next;
-  if (*head) r = *head, r->cleanup(r->data), *head = r->next, free(r);
+  if ((r = *head) != NULL) {
+    MG_INFO(("deleting r=%p, data=%p, cleanup=%p, next=%p", r, r->data,
+             r->cleanup, r->next));
+    *head = r->next, r->cleanup(r->data), free(r);
+    MG_INFO(("head: %p", s_rhead));
+  }
+}
+
+static void logstats(void) {
+  size_t a = 0, b = 0, c = 0;
+  js_stats(s_js, &a, &b, &c);
+  MG_INFO(("Free C RAM: %u, JS RAM: total %u, lowest free %u, C stack: %u",
+           esp_get_free_heap_size, (unsigned) a, (unsigned) b, (unsigned) c));
 }
 
 // These functions below will be imported into the JS engine.
@@ -75,9 +88,9 @@ void timer_cleanup(void *data) {
   unsigned long id = (unsigned long) data;
   struct mg_timer **head = (struct mg_timer **) &s_mgr.timers, *t;
   while (*head && (*head)->id != id) head = &(*head)->next;
-  if (*head) {
-    MG_INFO(("%lu (%s)", id, (char *) (*head)->arg));
-    t = *head, *head = t->next, free(t->arg), free(t);
+  if ((t = *head) != NULL) {
+    MG_INFO(("%lu (%s)", id, (char *) t->arg));
+    *head = t->next, free(t->arg), free(t);
   }
 }
 
@@ -88,6 +101,7 @@ static void js_timer_fn(void *userdata) {
   jsval_t res = js_eval(s_js, buf, ~0U);
   if (js_type(res) == JS_ERR)
     MG_ERROR(("%s: %s", (char *) userdata, js_str(s_js, res)));
+  logstats();
 }
 
 static jsval_t mktimer(struct js *js, jsval_t *args, int nargs) {
@@ -123,13 +137,23 @@ static jsval_t js_log(struct js *js, jsval_t *args, int nargs) {
   }
   buf[sizeof(buf) - 1] = '\0';
   MG_INFO(("JS-> %s", buf));
-  return js_mkval(JS_UNDEF);
+  return js_mkundef();
+}
+
+static jsval_t js_delay(struct js *js, jsval_t *args, int nargs) {
+  long ms = (long) js_getnum(args[0]);
+  MG_INFO(("%ld", ms));
+#ifndef __linux__
+  delay(ms);
+#endif
+  return js_mkundef();
 }
 
 static struct js *jsinit(void *mem, size_t size) {
   struct js *js = js_create(mem, size);
 
   js_set(js, js_glob(js), "log", js_mkfun(js_log));
+  js_set(js, js_glob(js), "delay", js_mkfun(js_delay));
 
   jsval_t gpio = js_mkobj(js);
   js_set(js, js_glob(js), "gpio", gpio);
@@ -147,28 +171,16 @@ static struct js *jsinit(void *mem, size_t size) {
 
 static char *rpc_exec(struct mg_str req) {
   char *code = mg_json_get_str(req, "$.params.code");
-  // MG_INFO(("Code: [%s]", code));
   if (code) {
     // Deallocate all resources
-    for (struct resource *tmp, *r = s_rhead; r != NULL; r = tmp) {
-      tmp = r->next;
-      r->cleanup(r->data);
-      free(r);
-    }
-    s_rhead = NULL;
+    while (s_rhead != NULL) delresource(s_rhead->cleanup, s_rhead->data);
     s_js = jsinit(s_js, JS_MEM_SIZE);
     jsval_t v = js_eval(s_js, code, ~0U);
-    // js_dump(s_js);
     free(code);
     return mg_mprintf("%Q", js_str(s_js, v));
   } else {
     return mg_mprintf("%Q", "missing code");
   }
-}
-
-static void logstats(void) {
-  MG_INFO(("Free C RAM: %u, JS RAM: used: %d%% of %d", esp_get_free_heap_size(),
-           js_usage(s_js), JS_MEM_SIZE));
 }
 
 static void cb(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
@@ -184,15 +196,17 @@ static void cb(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
   } else if (ev == MG_EV_WS_MSG) {
     struct mg_ws_message *wm = (struct mg_ws_message *) ev_data;
     // MG_INFO(("WS msg: %.*s", (int) wm->data.len, wm->data.ptr));
+    long id = mg_json_get_long(wm->data, "$.id", 0);
     char *method = mg_json_get_str(wm->data, "$.method");
     char *response = NULL;
     if (method != NULL && strcmp(method, "exec") == 0) {
       response = rpc_exec(wm->data);
+      mg_ws_printf(c, WEBSOCKET_OP_TEXT, "{%Q:%ld,%Q:%s}", "id", id, "result",
+                   response);
+    } else {
+      mg_ws_printf(c, WEBSOCKET_OP_TEXT, "{%Q:%ld,%Q:{%Q:%d,%Q:%Q}}", "id", id,
+                   "error", "code", 404, "message", "unknown method");
     }
-    long id = mg_json_get_long(wm->data, "$.id", 0);
-    MG_INFO(("RESP: [%s]", response));
-    mg_ws_printf(c, WEBSOCKET_OP_TEXT, "{%Q:%ld,%Q:%s}", "id", id, "result",
-                 response);
     free(response);
     free(method);
     logstats();
@@ -216,16 +230,16 @@ static void log_cb(uint8_t ch) {
   }
 }
 
-static void *webtask(void *param) {
+static void webtask(void *param) {
   s_js = jsinit(malloc(JS_MEM_SIZE), JS_MEM_SIZE);
   // mg_log_set("3");
   mg_mgr_init(&s_mgr);
   mg_log_set_fn(log_cb);
-  mg_http_listen(&s_mgr, "http://0.0.0.0:8080", cb, &s_mgr);
+  mg_http_listen(&s_mgr, "http://0.0.0.0:80", cb, &s_mgr);
   MG_INFO(("Starting Mongoose v%s", MG_VERSION));
   MG_INFO(("Go to http://elk-js.com, enter my IP and connect"));
   for (;;) mg_mgr_poll(&s_mgr, 100);
-  return param;
+  (void) param;
 }
 
 class JS {

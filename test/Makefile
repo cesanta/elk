@@ -2,7 +2,7 @@ ASAN ?= -fsanitize=address,undefined -fno-sanitize-recover=all
 CFLAGS ?= -W -Wall -Wextra -Werror -Wno-deprecated -I.. \
           -Wundef -Wshadow -Wdouble-promotion -fno-common -Wconversion \
           -g3 -Os -ffunction-sections -fdata-sections \
-          $(ASAN) -coverage -lm $(ARCH_FLAGS) $(EXTRA_CFLAGS)
+          $(ASAN) -coverage $(ARCH_FLAGS) $(EXTRA_CFLAGS)
 CWD ?= $(realpath $(CURDIR))
 ROOT ?= $(realpath $(CURDIR)/..)
 DOCKER = docker run $(DA) --rm -e WINEDEBUG=-all -v $(ROOT):$(ROOT) -w $(CWD)
@@ -62,8 +62,8 @@ esp32: arduino
 	./arduino/arduino $(CMD) --board esp32:esp32:esp32 tmp/tmp.ino
 #	$(DOCKER) mdashnet/cc2 ./arduino/arduino --verify --board esp32:esp32:esp32 tmp/tmp.ino
 
-elk:
-	$(CC) ../elk.c ../examples/cmdline/main.c -I.. -W -Wall -DJS_DUMP -O3 -lm -o $(DESTDIR)/$@
+elk: ../elk.c ../examples/cmdline/main.c
+	$(CC) $^ -I.. $(CFLAGS) -DJS_DUMP -o $(DESTDIR)/$@
 
 coverage: test
 	gcov -l -n *.gcno | sed '/^$$/d' | sed 'N;s/\n/ /'
