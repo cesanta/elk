@@ -21,7 +21,13 @@ Elk features include:
 - Small footprint: about 20KB on flash/disk, about 100 bytes RAM for core VM
 - No bytecode. Interprets JS code directly
 
-Below is a demonstration on a classic Arduino Nano board which has
+Elk approach is different from other scripting environments like micropython,
+which provide a complete JS API for everything.  Elk is completely bare, it
+does not even have a standard library. All required functionality is supposed
+to be imported from C/C++ firmware, and JS code simply orchestrates things.
+That leaves Elk very minimal and tunable.
+
+Below is a blinky demonstration on a classic Arduino Nano board which has
 2K RAM and 30K flash (see [full sketch](examples/BlinkyJS/BlinkyJS.ino)):
 
 ![Elk on Arduino Nano](test/nano.gif)

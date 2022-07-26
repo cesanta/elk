@@ -1,7 +1,7 @@
 ASAN ?= -fsanitize=address,undefined -fno-sanitize-recover=all
 CFLAGS ?= -W -Wall -Wextra -Werror -Wno-deprecated -I.. \
           -Wundef -Wshadow -Wdouble-promotion -fno-common -Wconversion \
-          -g3 -Os -ffunction-sections -fdata-sections \
+          -g3 -O3 -ffunction-sections -fdata-sections \
           $(ASAN) -coverage $(ARCH_FLAGS) $(EXTRA_CFLAGS)
 CWD ?= $(realpath $(CURDIR))
 ROOT ?= $(realpath $(CURDIR)/..)

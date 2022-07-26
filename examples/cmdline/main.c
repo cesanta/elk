@@ -19,8 +19,6 @@
 
 #include "elk.h"
 
-static struct js *s_js;
-
 // Prints all arguments, one by one, delimit by space
 static jsval_t js_print(struct js *js, jsval_t *args, int nargs) {
   for (int i = 0; i < nargs; i++) {
@@ -33,7 +31,7 @@ static jsval_t js_print(struct js *js, jsval_t *args, int nargs) {
 
 int main(int argc, char *argv[]) {
   char mem[8192], dump = 0;
-  struct js *js = s_js = js_create(mem, sizeof(mem));
+  struct js *js = js_create(mem, sizeof(mem));
   jsval_t res = js_mkundef();
 
   // Implement `print` function
@@ -43,6 +41,8 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-d") == 0) {
       dump++;
+    } else if (strcmp(argv[i], "-gct") == 0 && i + 1 < argc) {
+      js_setgct(js, strtoul(argv[++i], 0, 0));
     } else {
       res = js_eval(js, argv[i], ~0U);
     }

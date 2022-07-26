@@ -64,6 +64,7 @@ struct js {
   uint8_t *mem;       // Available JS memory
   jsoff_t size;       // Memory size
   jsoff_t brk;        // Current mem usage boundary
+  jsoff_t gct;        // GC threshold. If brk > gct, trigger GC
   jsoff_t maxcss;     // Maximum allowed C stack size usage
   void *cstk;         // C stack pointer at the beginning of js_eval()
 };
@@ -767,12 +768,10 @@ static jsval_t do_call_op(struct js *js, jsval_t func, jsval_t args) {
   if (vtype(func) == T_FUNC) {
     jsoff_t fnlen, fnoff = vstr(js, func, &fnlen);
     js->nogc = (jsoff_t) (fnoff - sizeof(jsoff_t));
-    // printf("NOGC: %u\n", js->nogc);
     res = call_js(js, (const char *) (&js->mem[fnoff]), fnlen);
   } else {
     res = call_c(js, (jsval_t(*)(struct js *, jsval_t *, int)) vdata(func));
   }
-  // printf("  -> %s\n", js_str(js, res));
   js->code = code, js->clen = clen, js->pos = pos;  // Restore parser
   js->flags = flags, js->tok = tok, js->nogc = nogc;
   js->consumed = 1;
@@ -1273,8 +1272,6 @@ static jsval_t js_continue(struct js *js) {
 
 static jsval_t js_return(struct js *js) {
   uint8_t exe = !(js->flags & F_NOEXEC);
-  // printf("RB [%.*s] tok %d, pos %u,  fl %d scope %s\n", (int) js->clen,
-  //      js->code, js->tok, js->pos, js->flags, js_str(js, js->scope));
   js->consumed = 1;
   if (exe && !(js->flags & F_CALL)) return js_mkerr(js, "not in func");
   if (next(js) == TOK_SEMICOLON) return js_mkundef();
@@ -1283,20 +1280,13 @@ static jsval_t js_return(struct js *js) {
     js->pos = js->clen;     // Shift to the end - exit the code snippet
     js->flags |= F_RETURN;  // Tell caller we've executed
   }
-  // printf("RE %s, tok %d\n", js_str(js, res), js->tok);
-  // js_dump(js);
   return resolveprop(js, res);
 }
 
 static jsval_t js_stmt(struct js *js) {
   jsval_t res;
   // jsoff_t pos = js->pos - js->tlen;
-  // printf("STATEMENT, tok %d, flags %d, pos %u\n", next(js), js->flags,
-  // js->pos); printf("  [%.*s]\n", (int) js->clen, js->code);
-  // if (js->lwm < js->size / 4) js_gc(js);
-  js_gc(js);
-  // printf("  [%.*s]\n", (int) js->clen, js->code);
-  // js_dump(js);
+  if (js->brk > js->gct) js_gc(js);
   switch (next(js)) {  // clang-format off
     case TOK_CASE: case TOK_CATCH: case TOK_CLASS: case TOK_CONST:
     case TOK_DEFAULT: case TOK_DELETE: case TOK_DO: case TOK_FINALLY:
@@ -1331,10 +1321,12 @@ struct js *js_create(void *buf, size_t len) {
   js->scope = mkobj(js, 0);                  // Create global scope
   js->size = js->size / 8U * 8U;             // Align js->size by 8 byte
   js->lwm = js->size;                        // Initial LWM: 100% free
+  js->gct = js->size / 2;
   return js;
 }
 
 // clang-format off
+void js_setgct(struct js *js, size_t gct) { js->gct = (jsoff_t) gct; }
 void js_setmaxcss(struct js *js, size_t max) { js->maxcss = (jsoff_t) max; }
 jsval_t js_mktrue(void) { return mkval(T_BOOL, 1); }
 jsval_t js_mkfalse(void) { return mkval(T_BOOL, 0); }

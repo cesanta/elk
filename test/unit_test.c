@@ -551,7 +551,7 @@ static void test_c_funcs(void) {
 
 static void test_ternary(void) {
   struct js *js;
-  char mem[sizeof(*js) + 1500];
+  char mem[sizeof(*js) + 4500];
   assert((js = js_create(mem, sizeof(mem))) != NULL);
   assert(ev(js, "'aa'; 'cc'; 'bb';", "\"bb\""));
   assert(ev(js, "'aa'; 'cc'; '12345'; 'bb';", "\"bb\""));
