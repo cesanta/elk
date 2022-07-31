@@ -55,33 +55,26 @@ static void logstats(void) {
 // These functions below will be imported into the JS engine.
 // Note that they are inside the extern "C" section.
 static jsval_t gpio_write(struct js *js, jsval_t *args, int nargs) {
-  int pin, val;
-  jsval_t res = js_checkargs(js, args, nargs, "ii", &pin, &val);
-  if (js_type(res) == JS_UNDEF) {
-    MG_INFO(("gpio.write %d -> %d", pin, val));
-    digitalWrite(pin, val);
-  }
-  return res;
+  if (!js_chkargs(args, nargs, "dd")) return js_mkerr(js, "bad args");
+  int pin = js_getnum(args[0]), val = js_getnum(args[1]);
+  MG_INFO(("gpio.write %d -> %d", pin, val));
+  digitalWrite(pin, val);
+  return js_mknull();
 }
 
 static jsval_t gpio_read(struct js *js, jsval_t *args, int nargs) {
-  int pin;
-  jsval_t res = js_checkargs(js, args, nargs, "i", &pin);
-  if (js_type(res) == JS_UNDEF) {
-    MG_INFO(("gpio.read %d", pin));
-    res = js_mknum(digitalRead(pin));
-  }
-  return res;
+  if (!js_chkargs(args, nargs, "d")) return js_mkerr(js, "bad args");
+  int pin = js_getnum(args[0]);
+  MG_INFO(("gpio.read %d", pin));
+  return js_mknum(digitalRead(pin));
 }
 
 static jsval_t gpio_mode(struct js *js, jsval_t *args, int nargs) {
-  int pin, mode;
-  jsval_t res = js_checkargs(js, args, nargs, "ii", &pin, &mode);
-  if (js_type(res) == JS_UNDEF) {
-    MG_INFO(("gpio.mode %d -> %d", pin, mode));
-    pinMode(pin, mode);
-  }
-  return res;
+  if (!js_chkargs(args, nargs, "dd")) return js_mkerr(js, "bad args");
+  int pin = js_getnum(args[0]), mode = js_getnum(args[1]);
+  MG_INFO(("gpio.mode %d -> %d", pin, mode));
+  pinMode(pin, mode);
+  return js_mknull();
 }
 
 void timer_cleanup(void *data) {
@@ -105,26 +98,20 @@ static void js_timer_fn(void *userdata) {
 }
 
 static jsval_t mktimer(struct js *js, jsval_t *args, int nargs) {
-  int milliseconds = 0;
-  const char *funcname = NULL;
-  jsval_t res = js_checkargs(js, args, nargs, "is", &milliseconds, &funcname);
-  if (js_type(res) == JS_UNDEF) {
-    struct mg_timer *t = mg_timer_add(&s_mgr, milliseconds, MG_TIMER_REPEAT,
-                                      js_timer_fn, strdup(funcname));
-    MG_INFO(("mktimer %lu, %d ms, fn %s", t->id, milliseconds, funcname));
-    addresource(timer_cleanup, (void *) t->id);
-    res = js_mknum(t->id);
-  }
-  return res;
+  if (!js_chkargs(args, nargs, "ds")) return js_mkerr(js, "bad args");
+  int milliseconds = js_getnum(args[0]);
+  const char *funcname = js_getstr(js, args[1], NULL);
+  struct mg_timer *t = mg_timer_add(&s_mgr, milliseconds, MG_TIMER_REPEAT,
+                                    js_timer_fn, strdup(funcname));
+  MG_INFO(("mktimer %lu, %d ms, fn %s", t->id, milliseconds, funcname));
+  addresource(timer_cleanup, (void *) t->id);
+  return js_mknum(t->id);
 }
 
 static jsval_t deltimer(struct js *js, jsval_t *args, int nargs) {
-  unsigned long id;
-  jsval_t res = js_checkargs(js, args, nargs, "i", &id);
-  if (js_type(res) == JS_UNDEF) {
-    delresource(timer_cleanup, (void *) id);
-  }
-  return res;
+  if (!js_chkargs(args, nargs, "d")) return js_mkerr(js, "bad args");
+  delresource(timer_cleanup, (void *) (unsigned long) js_getnum(args[0]));
+  return js_mknull();
 }
 
 static jsval_t js_log(struct js *js, jsval_t *args, int nargs) {

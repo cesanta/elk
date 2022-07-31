@@ -239,32 +239,24 @@ char *js_getstr(struct js *js, jsval_t val, size_t *len);  // Get string
 
 Extract C values from JS values
 
-### js\_checkargs()
+### js\_chkargs()
 
 ```c
-jsval_t js_checkargs(struct js *js, jsval_t *args, int nargs, const char *spec, ...);
+bool js_chkargs(jsval_t *args, int nargs, const char *spec);
 ```
 
-A helper function that fetches JS arguments into C values, according to
-`spec` type specification. Return `JS_ERR` on error, or `JS_UNDEF` on success.
-Supported specifiers:
-- `b` for `bool`
-- `d` for `double`
-- `i` for `char`, `short`, `int`, and corresponding unsigned variants
-- `s` for `char *`
-- `j` for `jsval_t`
+A helper function that checks a validity of the arguments passed to a function.
+A `spec` is a 0-terminated string where each character represents a type of
+the expected argument: `b` for `bool`, `d` for number, `s` for string, `j`
+for any other JS value.
 
 Usage example - a C function that implements a JS function
 `greater_than(number1, number2)`:
 
 ```c
-jsval_t js_gt(struct js *js, jsval_t *args, int nargs) {
-  double a, b;
-  jsval_t res = js_checkargs(js, args, nargs, "dd", &a, &b);
-  if (js_type(res) == JS_UNDEF) {
-    res = a > b ? js_mktrue() : js_mkfalse();
-  }
-  return res;
+static jsval_t js_gt(struct js *js, jsval_t *args, int nargs) {
+  if (!js_chkargs(args, nargs, "dd")) return js_mkerr(js, "bad args!");
+  return js_getnum(args[0]) > js_getnum(args[1]) ? js_mktrue() : js_mkfalse();
 }
 ```
 

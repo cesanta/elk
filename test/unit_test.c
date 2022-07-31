@@ -126,6 +126,8 @@ static void test_basic(void) {
   assert(ev(js, "a = {b:2}", "{\"b\":2}"));
   assert(ev(js, "a", "{\"b\":2}"));
   assert(ev(js, "a.b", "2"));
+  assert(ev(js, "({a:3}).a", "3"));
+  assert(ev(js, "({\"a\":4})", "{\"a\":4}"));
   assert(ev(js, "a.b = {c:3}", "{\"c\":3}"));
   assert(ev(js, "a", "{\"b\":{\"c\":3}}"));
   assert(ev(js, "a.b.c", "3"));
@@ -419,6 +421,12 @@ static void test_funcs(void) {
   assert(ev(js, "f() + 2;", "3"));
 
   assert(ev(js, "f=function (x){return x+1;}; f(1);", "2"));
+
+  assert(ev(js, "f = function(x){return x;};", "function(x){return x;}"));
+  assert(ev(js, "f(2)", "2"));
+  assert(ev(js, "f({})", "{}"));
+  assert(ev(js, "f({a:5,b:3}).b", "3"));
+  assert(ev(js, "f({\"a\":5,\"b\":3}).b", "3"));
 }
 
 static void test_bool(void) {
@@ -516,12 +524,8 @@ static jsval_t js_set_timer(struct js *js, jsval_t *args, int nargs) {
 }
 
 static jsval_t js_gt(struct js *js, jsval_t *args, int nargs) {
-  double a, b;
-  jsval_t res = js_checkargs(js, args, nargs, "dd", &a, &b);
-  if (js_type(res) == JS_UNDEF) {
-    res = a > b ? js_mktrue() : js_mkfalse();
-  }
-  return res;
+  if (!js_chkargs(args, nargs, "dd")) return js_mkerr(js, "doh");
+  return js_getnum(args[0]) > js_getnum(args[1]) ? js_mktrue() : js_mkfalse();
 }
 
 static void test_c_funcs(void) {
@@ -530,9 +534,9 @@ static void test_c_funcs(void) {
 
   assert((js = js_create(mem, sizeof(mem))) != NULL);
   js_set(js, js_glob(js), "gt", js_mkfun(js_gt));
-  assert(ev(js, "gt()", "ERROR: arg count"));
-  assert(ev(js, "gt(1,null)", "ERROR: arg 1"));
-  assert(ev(js, "gt(null, 1)", "ERROR: arg 0"));
+  assert(ev(js, "gt()", "ERROR: doh"));
+  assert(ev(js, "gt(1,null)", "ERROR: doh"));
+  assert(ev(js, "gt(null, 1)", "ERROR: doh"));
   assert(ev(js, "gt(1,2)", "false"));
   assert(ev(js, "gt(1,1)", "false"));
   assert(ev(js, "gt(2,1)", "true"));
@@ -547,6 +551,15 @@ static void test_c_funcs(void) {
   if (s_timer_fn) s_timer_fn(1, s_timer_fn_data);  // C code calls timer
   assert(ev(js, "v", "8"));
   // printf("--> [%s]\n", js_str(js, js_glob(js)));
+
+  jsval_t args[] = {0, js_mktrue(), js_mkstr(js, "a", 1), js_mknull()};
+  assert(js_chkargs(args, 4, "dbsj") == true);
+  assert(js_chkargs(args, 4, "dbsjb") == false);
+  assert(js_chkargs(args, 4, "bbsj") == false);
+  assert(js_chkargs(args, 4, "ddsj") == false);
+  assert(js_chkargs(args, 4, "dbdj") == false);
+  assert(js_chkargs(args, 4, "dbss") == false);
+  assert(js_chkargs(args, 4, "d") == false);
 }
 
 static void test_ternary(void) {

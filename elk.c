@@ -21,10 +21,8 @@
 #endif
 
 #include <assert.h>
-#include <inttypes.h>
 #include <math.h>
 #include <stdarg.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -866,14 +864,20 @@ static jsval_t js_obj_literal(struct js *js) {
   if (is_err(obj)) return obj;
   js->consumed = 1;
   while (next(js) != TOK_RBRACE) {
-    EXPECT(TOK_IDENTIFIER, );
-    size_t koff = js->toff, klen = js->tlen;
+    jsval_t key = 0;
+    if (js->tok == TOK_IDENTIFIER) {
+      if (exe) key = js_mkstr(js, js->code + js->toff, js->tlen);
+    } else if (js->tok == TOK_STRING) {
+      if (exe) key = js_str_literal(js);
+    } else {
+      return js_mkerr(js, "parse error");
+    }
+    js->consumed = 1;
     EXPECT(TOK_COLON, );
     jsval_t val = js_expr(js);
     if (exe) {
       // printf("XXXX [%s] scope: %lu\n", js_str(js, val), vdata(js->scope));
       if (is_err(val)) return val;
-      jsval_t key = js_mkstr(js, js->code + koff, klen);
       if (is_err(key)) return key;
       jsval_t res = setprop(js, obj, key, resolveprop(js, val));
       if (is_err(res)) return res;
@@ -1369,27 +1373,15 @@ void js_stats(struct js *js, size_t *total, size_t *lwm, size_t *css) {
 }
 // clang-format on
 
-jsval_t js_checkargs(struct js *js, jsval_t *args, int nargs, const char *spec,
-                     ...) {
-  va_list ap;
-  int i = 0;
-  va_start(ap, spec);
-  for (i = 0; i < nargs; i++) {
-    uint8_t t = vtype(args[i]);
-    switch (spec[i]) {  // clang-format off
-      case 'b': if (t != T_BOOL) goto fail; *(va_arg(ap, bool *)) = js_getbool(args[i]); break;
-      case 'd': if (t != T_NUM) goto fail; *(va_arg(ap, double *)) = js_getnum(args[i]); break;
-      case 'i': if (t != T_NUM) goto fail; *(va_arg(ap, int *)) = (int) js_getnum(args[i]); break;
-      case 's': if (t != T_STR) goto fail; *(va_arg(ap, char **)) = js_getstr(js, args[i], NULL); break;
-      case 'j': *(va_arg(ap, jsval_t *)) = args[i]; break;
-      default: goto fail;
-    }  // clang-format on
+bool js_chkargs(jsval_t *args, int nargs, const char *spec) {
+  int i = 0, ok = 1;
+  for (; ok && i < nargs && spec[i]; i++) {
+    uint8_t t = vtype(args[i]), c = (uint8_t) spec[i];
+    ok = (c == 'b' && t == T_BOOL) || (c == 'd' && t == T_NUM) ||
+         (c == 's' && t == T_STR) || (c == 'j');
   }
-  va_end(ap);
-  if (spec[i] != '\0') return js_mkerr(js, "arg count");
-  return js_mkundef();
-fail:
-  return js_mkerr(js, "arg %d", i);
+  if (spec[i] != '\0' || i != nargs) ok = 0;
+  return ok;
 }
 
 jsval_t js_eval(struct js *js, const char *buf, size_t len) {

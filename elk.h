@@ -17,6 +17,7 @@
 #define JS_VERSION "3.0.0"
 #pragma once
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -31,9 +32,9 @@ struct js *js_create(void *buf, size_t len);         // Create JS instance
 jsval_t js_eval(struct js *, const char *, size_t);  // Execute JS code
 jsval_t js_glob(struct js *);                        // Return global object
 const char *js_str(struct js *, jsval_t val);        // Stringify JS value
-jsval_t js_checkargs(struct js *, jsval_t *, int, const char *, ...);  // Check
-void js_setmaxcss(struct js *, size_t);  // Set max C stack size
-void js_setgct(struct js *, size_t);     // Set GC trigger threshold
+bool js_chkargs(jsval_t *, int, const char *);       // Check args validity
+void js_setmaxcss(struct js *, size_t);              // Set max C stack size
+void js_setgct(struct js *, size_t);                 // Set GC trigger threshold
 void js_stats(struct js *, size_t *total, size_t *min, size_t *cstacksize);
 void js_dump(struct js *);  // Print debug info. Requires -DJS_DUMP
 
