@@ -6,7 +6,7 @@ CFLAGS ?= -W -Wall -Wextra -Werror -Wno-deprecated -I.. \
 CWD ?= $(realpath $(CURDIR))
 ROOT ?= $(realpath $(CURDIR)/..)
 DOCKER = docker run $(DA) --rm -e WINEDEBUG=-all -v $(ROOT):$(ROOT) -w $(CWD)
-ARCH_FLAGS ?= -Wformat-truncation 
+ARCH_FLAGS ?= #-Wformat-truncation
 DESTDIR ?= .
 
 define clean

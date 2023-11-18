@@ -277,7 +277,7 @@ const char *js_str(struct js *js, jsval_t value) {
   return buf;
 }
 
-static bool js_truthy(struct js *js, jsval_t v) {
+bool js_truthy(struct js *js, jsval_t v) {
   uint8_t t = vtype(v);
   return (t == T_BOOL && vdata(v) != 0) || (t == T_NUM && tod(v) != 0.0) ||
          (t == T_OBJ || t == T_FUNC) || (t == T_STR && vstrlen(js, v) > 0);
