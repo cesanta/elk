@@ -19,14 +19,15 @@
 
 #include "elk.h"
 
-// Prints all arguments, one by one, delimit by space
-static jsval_t js_print(struct js *js, jsval_t *args, int nargs) {
-  for (int i = 0; i < nargs; i++) {
-    const char *space = i == 0 ? "" : " ";
-    printf("%s%s", space, js_str(js, args[i]));
-  }
-  putchar('\n');  // Finish by newline
-  return js_mkundef();
+// Function that loads JS code from a given file.
+static jsval_t js_require(struct js *js, jsval_t *args, int nargs) {
+  if (nargs != 1) return js_mkundef();
+  char data[1024];
+  char *filename = js_getstr(js, args[0], NULL);
+  FILE *fp = fopen(filename, "rb");
+  if (fp == NULL) return js_mkundef();
+  size_t len = fread(data, 1, sizeof(data), fp);
+  return js_eval(js, data, len);
 }
 
 int main(int argc, char *argv[]) {
@@ -34,8 +35,8 @@ int main(int argc, char *argv[]) {
   struct js *js = js_create(mem, sizeof(mem));
   jsval_t res = js_mkundef();
 
-  // Implement `print` function
-  js_set(js, js_glob(js), "print", js_mkfun(js_print));
+  // Implement `require` function
+  js_set(js, js_glob(js), "require", js_mkfun(js_require));
 
   // Treat every argument as JS expressions. Execute all one by one
   for (int i = 1; i < argc; i++) {
