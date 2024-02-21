@@ -2,17 +2,10 @@
 // All rights reserved
 //
 // Example Elk integration. Demontrates how to implement "require".
-// Create file "api.js" with the following content:
-//  ({
-//    add : function(a, b) { return a + b; },
-//    mul : function(a, b) { return a * b; },
-//  })
-//
 // Compile main.c and run:
-//   $ cc main.c ../../elk.c -I../.. -o cli
+//   $ cc main.c ../../elk.c -I../.. -o cli -DJS_DUMP
 //   $ ./cli 'let math = require("api.js"); math.mul(2,3);'
 //   6
-//   Executed in 0.663 ms. Mem usage is 3% of 8192 bytes.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
