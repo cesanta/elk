@@ -54,7 +54,7 @@ from C.
 int main(void) {
   char mem[200];
   struct js *js = js_create(mem, sizeof(mem));  // Create JS instance
-  jsval_t v = js_eval(js, "1 + 2 * 3", ~0);     // Execute JS code
+  jsval_t v = js_eval(js, "1 + 2 * 3", ~0U);    // Execute JS code
   printf("result: %s\n", js_str(js, v));        // result: 7
   return 0;
 }
@@ -80,7 +80,7 @@ int main(void) {
   char mem[200];
   struct js *js = js_create(mem, sizeof(mem));      // Create JS instance
   js_set(js, js_glob(js), "sum", js_mkfun(sum)));   // Import sum()
-  jsval_t result = js_eval(js, "sum(3, 4);", ~0);   // Call sum
+  jsval_t result = js_eval(js, "sum(3, 4);", ~0U);  // Call sum
   printf("result: %s\n", js_str(js, result));       // result: 7
   return 0;
 }
