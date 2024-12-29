@@ -36,9 +36,10 @@ Below is a blinky demonstration on a classic Arduino Nano board which has
 ## JavaScript on ESP32
 
 The [Esp32JS](examples/Esp32JS) Arduino sketch is an example of Elk integration
-with ESP32. Flash this sketch on your ESP32 board, go to http://elk-js.com,
-and get a JavaScript development environment instantly! All components,
-including ESP32 firmware and Web editor, are open.  Here how it looks like:
+with ESP32. Flash this sketch on your ESP32 board, go to
+https://cesanta.com/elk, and get a JavaScript development environment
+instantly! All components, including ESP32 firmware and Web editor, are open.
+Here how it looks like:
 
 ![](test/editor.png)
 
