@@ -291,3 +291,7 @@ Print debug info about the current JS state to stdout. Requires `-DJS_DUMP`
 
 Dual license: AGPLv3 or commercial. For commercial licensing, technical support
 and integration help, please contact us at https://cesanta.com/contact.html
+
+# See also
+- [Mongoose Web Server Library](https://mongoose.ws/) - a robust, open-source solution licensed under GPLv2, designed to seamlessly integrate web server functionality into your embedded devices. 
+- With complementary [Mongoose Wizard](https://mongoose.ws/wizard/) - a no-code visual tool that enables rapid WebUI creation without the need for frontend expertise.
