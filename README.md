@@ -36,9 +36,10 @@ Below is a blinky demonstration on a classic Arduino Nano board which has
 ## JavaScript on ESP32
 
 The [Esp32JS](examples/Esp32JS) Arduino sketch is an example of Elk integration
-with ESP32. Flash this sketch on your ESP32 board, go to http://elk-js.com,
-and get a JavaScript development environment instantly! All components,
-including ESP32 firmware and Web editor, are open.  Here how it looks like:
+with ESP32. Flash this sketch on your ESP32 board, go to
+https://cesanta.com/elk, and get a JavaScript development environment
+instantly! All components, including ESP32 firmware and Web editor, are open.
+Here how it looks like:
 
 ![](test/editor.png)
 
@@ -54,7 +55,7 @@ from C.
 int main(void) {
   char mem[200];
   struct js *js = js_create(mem, sizeof(mem));  // Create JS instance
-  jsval_t v = js_eval(js, "1 + 2 * 3", ~0);     // Execute JS code
+  jsval_t v = js_eval(js, "1 + 2 * 3", ~0U);    // Execute JS code
   printf("result: %s\n", js_str(js, v));        // result: 7
   return 0;
 }
@@ -80,7 +81,7 @@ int main(void) {
   char mem[200];
   struct js *js = js_create(mem, sizeof(mem));      // Create JS instance
   js_set(js, js_glob(js), "sum", js_mkfun(sum)));   // Import sum()
-  jsval_t result = js_eval(js, "sum(3, 4);", ~0);   // Call sum
+  jsval_t result = js_eval(js, "sum(3, 4);", ~0U);  // Call sum
   printf("result: %s\n", js_str(js, result));       // result: 7
   return 0;
 }
@@ -290,3 +291,7 @@ Print debug info about the current JS state to stdout. Requires `-DJS_DUMP`
 
 Dual license: AGPLv3 or commercial. For commercial licensing, technical support
 and integration help, please contact us at https://cesanta.com/contact.html
+
+# See also
+- [Mongoose Web Server Library](https://mongoose.ws/) - a robust, open-source solution licensed under GPLv2, designed to seamlessly integrate web server functionality into your embedded devices. 
+- With complementary [Mongoose Wizard](https://mongoose.ws/wizard/) - a no-code visual tool that enables rapid WebUI creation without the need for frontend expertise.
