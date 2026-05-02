@@ -1,0 +1,583 @@
+js_eval [label="jsval_t js_eval (struct js *js, const char *buf, size_t len)
+elk.c:1384"]
+js_eval -> jsval_t
+js_eval -> js_mkundef
+js_eval -> strlen
+js_eval -> next
+js_eval -> is_err
+js_eval -> js_stmt
+jsval_t [label="jsval_t()"]
+js_mkundef [label="jsval_t js_mkundef (void)
+elk.c:1334"]
+js_mkundef -> mkval
+mkval [label="jsval_t mkval (uint8_t type, uint64_t data)
+elk.c:133"]
+mkval -> jsval_t
+strlen [label="strlen()"]
+next [label="uint8_t next (struct js *js)
+elk.c:476"]
+next -> skiptonext
+next -> TOK
+next -> LOOK
+next -> tov
+next -> strtod
+next -> parseident
+skiptonext [label="jsoff_t skiptonext (const char *code, jsoff_t len, jsoff_t n)
+elk.c:427"]
+skiptonext -> is_space
+is_space [label="bool is_space (int c)
+elk.c:142"]
+TOK [label="TOK()"]
+LOOK [label="LOOK()"]
+tov [label="jsval_t tov (double d)
+elk.c:131"]
+strtod [label="strtod()"]
+parseident [label="uint8_t parseident (const char *buf, jsoff_t len, jsoff_t *tlen)
+elk.c:468"]
+parseident -> is_ident_begin
+parseident -> is_ident_continue
+parseident -> parsekeyword
+is_ident_begin [label="bool is_ident_begin (int c)
+elk.c:146"]
+is_ident_begin -> is_alpha
+is_alpha [label="bool is_alpha (int c)
+elk.c:145"]
+is_ident_continue [label="bool is_ident_continue (int c)
+elk.c:147"]
+is_ident_continue -> is_alpha
+is_ident_continue -> is_digit
+is_digit [label="bool is_digit (int c)
+elk.c:143"]
+parsekeyword [label="uint8_t parsekeyword (const char *buf, size_t len)
+elk.c:447"]
+parsekeyword -> streq
+streq [label="bool streq (const char *buf, size_t len, const char *p, size_t n)
+elk.c:443"]
+streq -> memcmp
+memcmp [label="memcmp()"]
+is_err [label="bool is_err (jsval_t v)
+elk.c:148"]
+is_err -> vtype
+vtype [label="uint8_t vtype (jsval_t v)
+elk.c:135"]
+vtype -> is_nan
+is_nan [label="bool is_nan (jsval_t v)
+elk.c:134"]
+js_stmt [label="jsval_t js_stmt (struct js *js)
+elk.c:1287"]
+js_stmt -> jsval_t
+js_stmt -> js_gc
+js_stmt -> next
+js_stmt -> js_mkerr
+js_stmt -> js_continue
+js_stmt -> js_break
+js_stmt -> js_let
+js_stmt -> js_if
+js_stmt -> js_block
+js_stmt -> js_for
+js_stmt -> js_return
+js_stmt -> resolveprop
+js_stmt -> js_expr
+js_gc [label="void js_gc (struct js *js)
+elk.c:417"]
+js_gc -> setlwm
+js_gc -> js_mark_all_entities_for_deletion
+js_gc -> js_unmark_used_entities
+js_gc -> js_delete_marked_entities
+setlwm [label="void setlwm (struct js *js)
+elk.c:170"]
+js_mark_all_entities_for_deletion [label="void js_mark_all_entities_for_deletion (struct js *js)
+elk.c:383"]
+js_unmark_used_entities [label="void js_unmark_used_entities (struct js *js)
+elk.c:406"]
+js_unmark_used_entities -> jsval_t
+js_unmark_used_entities -> js_unmark_entity
+js_unmark_used_entities -> vdata
+js_unmark_used_entities -> upper
+js_unmark_entity [label="jsoff_t js_unmark_entity (struct js *js, jsoff_t off)
+elk.c:390"]
+js_unmark_entity -> loadoff
+js_unmark_entity -> saveoff
+js_unmark_entity -> js_unmark_entity
+js_unmark_entity -> jsval_t
+js_unmark_entity -> loadval
+js_unmark_entity -> is_mem_entity
+js_unmark_entity -> vtype
+js_unmark_entity -> vdata
+loadoff [label="jsoff_t loadoff (struct js *js, jsoff_t off)
+elk.c:153"]
+loadoff -> assert
+loadoff -> memcpy
+assert [label="assert()"]
+memcpy [label="memcpy()"]
+saveoff [label="void saveoff (struct js *js, jsoff_t off, jsoff_t val)
+elk.c:151"]
+saveoff -> memcpy
+loadval [label="jsval_t loadval (struct js *js, jsoff_t off)
+elk.c:156"]
+loadval -> jsval_t
+loadval -> memcpy
+is_mem_entity [label="bool is_mem_entity (uint8_t t)
+elk.c:329"]
+vdata [label="size_t vdata (jsval_t v)
+elk.c:136"]
+vdata -> jsval_t
+upper [label="jsval_t upper (struct js *js, jsval_t scope)
+elk.c:157"]
+upper -> mkval
+upper -> loadoff
+upper -> vdata
+js_delete_marked_entities [label="void js_delete_marked_entities (struct js *js)
+elk.c:368"]
+js_mkerr [label="jsval_t js_mkerr (struct js *js, const char *xx, ...)
+elk.c:231"]
+js_mkerr -> cpy
+js_mkerr -> va_start
+js_mkerr -> vsnprintf
+js_mkerr -> va_end
+js_mkerr -> mkval
+cpy [label="size_t cpy (char *dst, size_t dstlen, const char *src, size_t srclen)
+elk.c:176"]
+va_start [label="va_start()"]
+vsnprintf [label="vsnprintf()"]
+va_end [label="va_end()"]
+js_continue [label="jsval_t js_continue (struct js *js)
+elk.c:1264"]
+js_continue -> js_mkerr
+js_continue -> js_mkundef
+js_break [label="jsval_t js_break (struct js *js)
+elk.c:1254"]
+js_break -> js_mkerr
+js_break -> js_mkundef
+js_let [label="jsval_t js_let (struct js *js)
+elk.c:1122"]
+js_let -> EXPECT
+js_let -> jsval_t
+js_let -> js_mkundef
+js_let -> next
+js_let -> js_expr
+js_let -> is_err
+js_let -> lkp
+js_let -> js_mkerr
+js_let -> setprop
+js_let -> js_mkstr
+js_let -> resolveprop
+EXPECT [label="EXPECT()"]
+js_expr [label="jsval_t js_expr (struct js *js)
+elk.c:1118"]
+js_expr -> js_assignment
+js_assignment [label="jsval_t js_assignment (struct js *js)
+elk.c:1108"]
+js_assignment -> RTL_BINOP
+js_assignment -> js_ternary
+js_assignment -> js_assignment
+js_assignment -> next
+RTL_BINOP [label="RTL_BINOP()"]
+js_ternary [label="jsval_t js_ternary (struct js *js)
+elk.c:1086"]
+js_ternary -> jsval_t
+js_ternary -> js_logical_or
+js_ternary -> next
+js_ternary -> js_truthy
+js_ternary -> resolveprop
+js_ternary -> js_ternary
+js_ternary -> EXPECT
+js_logical_or [label="jsval_t js_logical_or (struct js *js)
+elk.c:1068"]
+js_logical_or -> jsval_t
+js_logical_or -> js_logical_and
+js_logical_or -> is_err
+js_logical_or -> next
+js_logical_or -> resolveprop
+js_logical_or -> js_truthy
+js_logical_or -> js_logical_or
+js_logical_and [label="jsval_t js_logical_and (struct js *js)
+elk.c:1050"]
+js_logical_and -> jsval_t
+js_logical_and -> js_bitwise_or
+js_logical_and -> is_err
+js_logical_and -> next
+js_logical_and -> resolveprop
+js_logical_and -> js_truthy
+js_logical_and -> js_logical_and
+js_bitwise_or [label="jsval_t js_bitwise_or (struct js *js)
+elk.c:1046"]
+js_bitwise_or -> LTR_BINOP
+js_bitwise_or -> js_bitwise_xor
+js_bitwise_or -> next
+LTR_BINOP [label="LTR_BINOP()"]
+js_bitwise_xor [label="jsval_t js_bitwise_xor (struct js *js)
+elk.c:1042"]
+js_bitwise_xor -> LTR_BINOP
+js_bitwise_xor -> js_bitwise_and
+js_bitwise_xor -> next
+js_bitwise_and [label="jsval_t js_bitwise_and (struct js *js)
+elk.c:1038"]
+js_bitwise_and -> LTR_BINOP
+js_bitwise_and -> js_equality
+js_bitwise_and -> next
+js_equality [label="jsval_t js_equality (struct js *js)
+elk.c:1034"]
+js_equality -> LTR_BINOP
+js_equality -> js_comparison
+js_equality -> next
+js_comparison [label="jsval_t js_comparison (struct js *js)
+elk.c:1029"]
+js_comparison -> LTR_BINOP
+js_comparison -> js_shifts
+js_comparison -> next
+js_shifts [label="jsval_t js_shifts (struct js *js)
+elk.c:1024"]
+js_shifts -> LTR_BINOP
+js_shifts -> js_plus_minus
+js_shifts -> next
+js_plus_minus [label="jsval_t js_plus_minus (struct js *js)
+elk.c:1020"]
+js_plus_minus -> LTR_BINOP
+js_plus_minus -> js_mul_div_rem
+js_plus_minus -> next
+js_mul_div_rem [label="jsval_t js_mul_div_rem (struct js *js)
+elk.c:1015"]
+js_mul_div_rem -> LTR_BINOP
+js_mul_div_rem -> js_unary
+js_mul_div_rem -> next
+js_unary [label="jsval_t js_unary (struct js *js)
+elk.c:1002"]
+js_unary -> next
+js_unary -> do_op
+js_unary -> js_mkundef
+js_unary -> js_unary
+js_unary -> js_postfix
+do_op [label="jsval_t do_op (struct js *js, uint8_t op, jsval_t lhs, jsval_t rhs)
+elk.c:771"]
+do_op -> jsval_t
+do_op -> resolveprop
+do_op -> setlwm
+do_op -> is_err
+do_op -> is_assign
+do_op -> vtype
+do_op -> js_mkerr
+do_op -> js_mkstr
+do_op -> typestr
+do_op -> strlen
+do_op -> do_call_op
+do_op -> assign
+do_op -> do_assign_op
+do_op -> tov
+do_op -> mkval
+do_op -> vdata
+do_op -> do_string_op
+do_op -> is_unary
+do_op -> tod
+do_op -> do_dot_op
+resolveprop [label="jsval_t resolveprop (struct js *js, jsval_t v)
+elk.c:606"]
+resolveprop -> vtype
+resolveprop -> resolveprop
+resolveprop -> loadval
+resolveprop -> vdata
+is_assign [label="bool is_assign (uint8_t tok)
+elk.c:150"]
+js_mkstr [label="jsval_t js_mkstr (struct js *js, const void *ptr, size_t len)
+elk.c:296"]
+js_mkstr -> mkentity
+mkentity [label="jsval_t mkentity (struct js *js, jsoff_t b, const void *buf, size_t len)
+elk.c:285"]
+mkentity -> js_alloc
+mkentity -> js_mkerr
+mkentity -> memcpy
+mkentity -> memmove
+mkentity -> mkval
+js_alloc [label="jsoff_t js_alloc (struct js *js, size_t size)
+elk.c:277"]
+js_alloc -> align32
+align32 [label="jsoff_t align32 (jsoff_t v)
+elk.c:158"]
+memmove [label="memmove()"]
+typestr [label="const char *typestr (uint8_t t)
+elk.c:112"]
+do_call_op [label="jsval_t do_call_op (struct js *js, jsval_t func, jsval_t args)
+elk.c:745"]
+do_call_op -> vtype
+do_call_op -> js_mkerr
+do_call_op -> coderefoff
+do_call_op -> codereflen
+do_call_op -> skiptonext
+do_call_op -> jsval_t
+do_call_op -> js_mkundef
+do_call_op -> vstr
+do_call_op -> call_js
+do_call_op -> call_c
+do_call_op -> vdata
+coderefoff [label="jsoff_t coderefoff (jsval_t v)
+elk.c:138"]
+codereflen [label="jsoff_t codereflen (jsval_t v)
+elk.c:139"]
+vstr [label="jsoff_t vstr (struct js *js, jsval_t value, jsoff_t *len)
+elk.c:208"]
+vstr -> vdata
+vstr -> offtolen
+vstr -> loadoff
+offtolen [label="jsoff_t offtolen (jsoff_t off)
+elk.c:154"]
+call_js [label="jsval_t call_js (struct js *js, const char *fn, jsoff_t fnlen)
+elk.c:706"]
+call_js -> mkscope
+call_js -> skiptonext
+call_js -> parseident
+call_js -> jsval_t
+call_js -> js_mkundef
+call_js -> js_expr
+call_js -> setprop
+call_js -> js_mkstr
+call_js -> js_eval
+call_js -> is_err
+call_js -> delscope
+mkscope [label="void mkscope (struct js *js)
+elk.c:547"]
+mkscope -> assert
+mkscope -> vdata
+mkscope -> mkobj
+mkobj [label="jsval_t mkobj (struct js *js, jsoff_t parent)
+elk.c:302"]
+mkobj -> mkentity
+setprop [label="jsval_t setprop (struct js *js, jsval_t obj, jsval_t k, jsval_t v)
+elk.c:306"]
+setprop -> vdata
+setprop -> memcpy
+setprop -> mkentity
+delscope [label="void delscope (struct js *js)
+elk.c:554"]
+delscope -> upper
+call_c [label="jsval_t call_c (struct js *js, jsval_t (*fn) (struct js *, jsval_t *, int))
+elk.c:685"]
+call_c -> next
+call_c -> resolveprop
+call_c -> js_expr
+call_c -> js_mkerr
+call_c -> memcpy
+call_c -> reverse
+call_c -> fn
+call_c -> setlwm
+reverse [label="void reverse (jsval_t *args, int nargs)
+elk.c:677"]
+fn [label="fn()"]
+assign [label="jsval_t assign (struct js *js, jsval_t lhs, jsval_t val)
+elk.c:612"]
+assign -> saveval
+assign -> vdata
+saveval [label="void saveval (struct js *js, jsoff_t off, jsval_t val)
+elk.c:152"]
+saveval -> memcpy
+do_assign_op [label="jsval_t do_assign_op (struct js *js, uint8_t op, jsval_t l, jsval_t r)
+elk.c:617"]
+do_assign_op -> jsval_t
+do_assign_op -> do_op
+do_assign_op -> resolveprop
+do_assign_op -> assign
+do_string_op [label="jsval_t do_string_op (struct js *js, uint8_t op, jsval_t l, jsval_t r)
+elk.c:624"]
+do_string_op -> vstr
+do_string_op -> jsval_t
+do_string_op -> js_mkstr
+do_string_op -> vtype
+do_string_op -> memmove
+do_string_op -> memcmp
+do_string_op -> mkval
+do_string_op -> js_mkerr
+is_unary [label="bool is_unary (uint8_t tok)
+elk.c:149"]
+tod [label="double tod (jsval_t v)
+elk.c:132"]
+do_dot_op [label="jsval_t do_dot_op (struct js *js, jsval_t l, jsval_t r)
+elk.c:649"]
+do_dot_op -> coderefoff
+do_dot_op -> vtype
+do_dot_op -> js_mkerr
+do_dot_op -> streq
+do_dot_op -> codereflen
+do_dot_op -> tov
+do_dot_op -> offtolen
+do_dot_op -> loadoff
+do_dot_op -> vdata
+do_dot_op -> lkp
+do_dot_op -> js_mkundef
+do_dot_op -> mkval
+lkp [label="jsoff_t lkp (struct js *js, jsval_t obj, const char *buf, size_t len)
+elk.c:579"]
+lkp -> loadoff
+lkp -> vdata
+lkp -> streq
+js_postfix [label="jsval_t js_postfix (struct js *js)
+elk.c:991"]
+js_postfix -> jsval_t
+js_postfix -> js_call_dot
+js_postfix -> is_err
+js_postfix -> next
+js_postfix -> do_op
+js_call_dot [label="jsval_t js_call_dot (struct js *js)
+elk.c:972"]
+js_call_dot -> jsval_t
+js_call_dot -> js_group
+js_call_dot -> is_err
+js_call_dot -> vtype
+js_call_dot -> lookup
+js_call_dot -> coderefoff
+js_call_dot -> codereflen
+js_call_dot -> next
+js_call_dot -> do_op
+js_call_dot -> js_call_params
+js_group [label="jsval_t js_group (struct js *js)
+elk.c:959"]
+js_group -> next
+js_group -> jsval_t
+js_group -> js_expr
+js_group -> is_err
+js_group -> js_mkerr
+js_group -> js_literal
+js_literal [label="jsval_t js_literal (struct js *js)
+elk.c:938"]
+js_literal -> next
+js_literal -> setlwm
+js_literal -> js_mkerr
+js_literal -> js_str_literal
+js_literal -> js_obj_literal
+js_literal -> js_func_literal
+js_literal -> js_mknull
+js_literal -> js_mkundef
+js_literal -> js_mktrue
+js_literal -> js_mkfalse
+js_literal -> mkcoderef
+js_str_literal [label="jsval_t js_str_literal (struct js *js)
+elk.c:825"]
+js_str_literal -> js_mkerr
+js_str_literal -> is_xdigit
+js_str_literal -> unhex
+js_str_literal -> js_mkstr
+is_xdigit [label="bool is_xdigit (int c)
+elk.c:144"]
+is_xdigit -> is_digit
+unhex [label="uint8_t unhex (uint8_t c)
+elk.c:141"]
+js_obj_literal [label="jsval_t js_obj_literal (struct js *js)
+elk.c:857"]
+js_obj_literal -> jsval_t
+js_obj_literal -> mkobj
+js_obj_literal -> js_mkundef
+js_obj_literal -> is_err
+js_obj_literal -> next
+js_obj_literal -> js_mkstr
+js_obj_literal -> js_str_literal
+js_obj_literal -> js_mkerr
+js_obj_literal -> EXPECT
+js_obj_literal -> js_expr
+js_obj_literal -> setprop
+js_obj_literal -> resolveprop
+js_func_literal [label="jsval_t js_func_literal (struct js *js)
+elk.c:889"]
+js_func_literal -> EXPECT
+js_func_literal -> next
+js_func_literal -> jsval_t
+js_func_literal -> js_block
+js_func_literal -> is_err
+js_func_literal -> js_mkstr
+js_func_literal -> mkval
+js_func_literal -> vdata
+js_block [label="jsval_t js_block (struct js *js, bool create_scope)
+elk.c:559"]
+js_block -> jsval_t
+js_block -> js_mkundef
+js_block -> mkscope
+js_block -> next
+js_block -> is_err
+js_block -> js_stmt
+js_block -> js_mkerr
+js_block -> delscope
+js_mknull [label="jsval_t js_mknull (void)
+elk.c:1335"]
+js_mknull -> mkval
+js_mktrue [label="jsval_t js_mktrue (void)
+elk.c:1332"]
+js_mktrue -> mkval
+js_mkfalse [label="jsval_t js_mkfalse (void)
+elk.c:1333"]
+js_mkfalse -> mkval
+mkcoderef [label="jsval_t mkcoderef (jsval_t off, jsoff_t len)
+elk.c:137"]
+mkcoderef -> mkval
+mkcoderef -> jsval_t
+lookup [label="jsval_t lookup (struct js *js, const char *buf, size_t len)
+elk.c:594"]
+lookup -> jsval_t
+lookup -> lkp
+lookup -> mkval
+lookup -> vdata
+lookup -> loadoff
+lookup -> js_mkerr
+js_call_params [label="jsval_t js_call_params (struct js *js)
+elk.c:661"]
+js_call_params -> next
+js_call_params -> js_expr
+js_call_params -> EXPECT
+js_call_params -> mkcoderef
+js_truthy [label="bool js_truthy (struct js *js, jsval_t v)
+elk.c:271"]
+js_truthy -> vtype
+js_truthy -> vdata
+js_truthy -> tod
+js_truthy -> vstrlen
+vstrlen [label="jsoff_t vstrlen (struct js *js, jsval_t v)
+elk.c:155"]
+vstrlen -> offtolen
+vstrlen -> loadoff
+vstrlen -> vdata
+js_if [label="jsval_t js_if (struct js *js)
+elk.c:1157"]
+js_if -> EXPECT
+js_if -> jsval_t
+js_if -> js_mkundef
+js_if -> resolveprop
+js_if -> js_expr
+js_if -> js_truthy
+js_if -> js_block_or_stmt
+js_if -> lookahead
+js_if -> next
+js_block_or_stmt [label="jsval_t js_block_or_stmt (struct js *js)
+elk.c:1150"]
+js_block_or_stmt -> next
+js_block_or_stmt -> js_block
+js_block_or_stmt -> jsval_t
+js_block_or_stmt -> resolveprop
+js_block_or_stmt -> js_stmt
+lookahead [label="inline uint8_t lookahead (struct js *js)
+elk.c:538"]
+lookahead -> next
+js_for [label="jsval_t js_for (struct js *js)
+elk.c:1196"]
+js_for -> jsval_t
+js_for -> js_mkundef
+js_for -> mkscope
+js_for -> expect
+js_for -> next
+js_for -> js_let
+js_for -> is_err2
+js_for -> js_expr
+js_for -> js_block_or_stmt
+js_for -> resolveprop
+js_for -> js_truthy
+js_for -> delscope
+expect [label="inline bool expect (struct js *js, uint8_t tok, jsval_t *res)
+elk.c:1180"]
+expect -> next
+expect -> js_mkerr
+is_err2 [label="inline bool is_err2 (jsval_t *v, jsval_t *res)
+elk.c:1190"]
+is_err2 -> is_err
+js_return [label="jsval_t js_return (struct js *js)
+elk.c:1274"]
+js_return -> js_mkerr
+js_return -> next
+js_return -> js_mkundef
+js_return -> jsval_t
+js_return -> resolveprop
+js_return -> js_expr
