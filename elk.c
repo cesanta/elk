@@ -1285,12 +1285,21 @@ static jsval_t js_continue(struct js *js) {
 static jsval_t js_return(struct js *js) {
   uint8_t exe = !(js->flags & F_NOEXEC);
   js->consumed = 1;
-  if (exe && !(js->flags & F_CALL)) return js_mkerr(js, "not in func");
-  if (next(js) == TOK_SEMICOLON) return js_mkundef();
+  // Allow `return` at the top level as well as inside a function call:
+  // at the top level, treat it as "end of snippet". This supports the
+  // common early-exit idiom in embedded `js_eval` snippets.
+  uint8_t tok = next(js);
+  if (tok == TOK_SEMICOLON || tok == TOK_RBRACE || tok == TOK_EOF) {
+    if (exe) {
+      js->pos = js->clen;                            // Shift to the end - exit the code snippet
+      if (js->flags & F_CALL) js->flags |= F_RETURN; // Tell caller we've executed
+    }
+    return js_mkundef();
+  }
   jsval_t res = resolveprop(js, js_expr(js));
   if (exe) {
-    js->pos = js->clen;     // Shift to the end - exit the code snippet
-    js->flags |= F_RETURN;  // Tell caller we've executed
+    js->pos = js->clen;                            // Shift to the end - exit the code snippet
+    if (js->flags & F_CALL) js->flags |= F_RETURN; // Tell caller we've executed
   }
   return resolveprop(js, res);
 }

@@ -102,6 +102,8 @@ int main(void) {
 - Objects: `let obj = {f: function(x) { return x * 2}}; obj.f(3);`
 - Every statement must end with a semicolon `;`
 - Strings are binary data chunks, not Unicode strings: `'Київ'.length === 8`
+- Top-level `return`: `return;` and `return <expr>;` outside any function
+  body exit the current `js_eval` snippet (see below).
 
 ## Not supported features
 
@@ -110,6 +112,44 @@ int main(void) {
 - No `=>` functions. Use `let f = function(...) {...};`
 - No arrays, closures, prototypes, `this`, `new`, `delete`
 - No standard library: no `Date`, `Regexp`, `Function`, `String`, `Number`
+
+## Top-level `return`
+
+A `return` statement outside any function body is allowed at the top level
+of a `js_eval` snippet, where it acts as **"end of snippet"**: parsing jumps
+to the end of the buffer, the rest of the code is skipped, and the value of
+`return <expr>` becomes the result of `js_eval`. This supports the natural
+early-exit idiom in embedded scripts that are passed directly to `js_eval`
+without a wrapping function:
+
+```javascript
+if (!sensorReady) { return; }   // bail out early
+processSensor();                // ...rest of the snippet
+```
+
+```c
+js_eval(js, "return", ~0U);          // -> undefined
+js_eval(js, "return;", ~0U);         // -> undefined
+js_eval(js, "return 2;", ~0U);       // -> 2
+js_eval(js, "{ return; }", ~0U);     // -> undefined  (works inside a block)
+js_eval(js, "return 1; 2;", ~0U);    // -> 1          (short-circuits the rest)
+```
+
+Behaviour notes:
+
+- Bare `return`, `return;`, `return}`, and `return<EOF>` all exit cleanly
+  with `undefined`. The idiomatic `if (cond) return;` short-circuits the
+  remainder of the snippet rather than silently falling through.
+- The internal `F_RETURN` flag is still only set inside `F_CALL` (i.e.
+  inside an actual function call). It does not leak across `js_eval` calls,
+  and function-body return semantics are unchanged: a `return` inside
+  `(function(){...})()` exits the function, not the surrounding snippet.
+
+```javascript
+// Function-body return is scoped to the function: only the function exits,
+// not the surrounding snippet.
+(function(){ return 1; })(); 99    // -> 99
+```
 
 ## Performance
 

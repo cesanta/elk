@@ -354,11 +354,14 @@ static void test_funcs(void) {
   assert(ev(js, "f(,)", "ERROR: parse error"));
   assert(ev(js, "f(1,)", "ERROR: parse error"));
   assert(ev(js, "f(,2)", "ERROR: parse error"));
-  assert(ev(js, "return", "ERROR: not in func"));
-  assert(ev(js, "return 2;", "ERROR: not in func"));
-  assert(ev(js, "{ return } ", "ERROR: not in func"));
+  // Top-level `return` exits the snippet with an optional value
+  assert(ev(js, "return", "undefined"));
+  assert(ev(js, "return;", "undefined"));
+  assert(ev(js, "return 2;", "2"));
+  assert(ev(js, "{ return; } ", "undefined"));
+  assert(ev(js, "return 1; 2;", "1"));   // return short-circuits the rest
   assert(ev(js, "f(3,4)", "17"));
-  assert(ev(js, "return", "ERROR: not in func"));
+  assert(ev(js, "return", "undefined"));
   assert(ev(js, "(function(){})()", "undefined"));
   assert(ev(js, "(function(){})(1,2,3)", "undefined"));
   assert(ev(js, "(function(){1;})(1,2,3)", "undefined"));
