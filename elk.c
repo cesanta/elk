@@ -14,11 +14,22 @@
 // Alternatively, you can license this software under a commercial
 // license, please contact us at https://cesanta.com/contact.html
 
+/*
 #if defined(__GNUC__) && !defined(JS_OPT) && !defined(ARDUINO_AVR_UNO) && \
     !defined(ARDUINO_AVR_NANO) && !defined(ARDUINO_AVR_PRO) &&            \
     !defined(__APPLE__)
 #pragma GCC optimize("O3,inline")
 #endif
+*/
+
+#if defined(__has_feature)
+#  if __has_feature(address_sanitizer)
+#    define JS_ASAN 1
+#  endif
+# else
+#  define JS_ASAN 0
+#endif
+
 
 #include <assert.h>
 #include <math.h>
@@ -176,10 +187,15 @@ static void setlwm(struct js *js) {
   jsoff_t n = 0, css = 0;
   if (js->brk < js->size) n = js->size - js->brk;
   if (js->lwm > n) js->lwm = n;
-  if ((char *) js->cstk > (char *) &n)
-    css = (jsoff_t) ((char *) js->cstk - (char *) &n);
+ 
+  char *cur  = (char *) &n;
+  char *base = (char *) js->cstk;
+  css = (jsoff_t) (cur > base ? cur - base : base - cur);  // abs difference
+
   if (css > js->css) js->css = css;
-}
+  // printf("LWM: %u, CSS: %u\n", (unsigned) js->lwm, (unsigned) js->css);
+  // printf("cstk: %p, stk: %p\n", js->cstk, &n);
+} 
 
 // Copy src to dst, make no overflows, 0-terminate. Return bytes copied
 static size_t cpy(char *dst, size_t dstlen, const char *src, size_t srclen) {
@@ -615,6 +631,8 @@ static jsval_t lookup(struct js *js, const char *buf, size_t len) {
 }
 
 static jsval_t resolveprop(struct js *js, jsval_t v) {
+  setlwm(js);
+  if (js->maxcss > 0 && js->css > js->maxcss) return js_mkerr(js, "C stack");
   if (vtype(v) != T_PROP) return v;
   return resolveprop(js,
                      loadval(js, (jsoff_t) (vdata(v) + sizeof(jsoff_t) * 2)));
@@ -779,8 +797,42 @@ static jsval_t do_call_op(struct js *js, jsval_t func, jsval_t args) {
 }
 
 // clang-format off
+#ifndef _MSC_VER
+__attribute__((no_sanitize("undefined")))
+#endif
+static jsval_t ubsan_op(struct js *js, uint8_t op, double a, double b, jsval_t l, jsval_t r) {
+  switch (op) {
+    //case TOK_EXP:     return tov(pow(a, b));
+    case TOK_DIV:     return tod(r) == 0 ? js_mkerr(js, "div by zero") : tov(a / b);
+    case TOK_REM:     return tod(r) == 0 ? js_mkerr(js, "rem by zero") : tov(a - b * ((double) (long) (a / b)));
+    case TOK_MUL:     return tov(a * b);
+    case TOK_PLUS:    return tov(a + b);
+    case TOK_MINUS:   return tov(a - b);
+    case TOK_XOR:     return tov((double)((long) a ^ (long) b));
+    case TOK_AND:     return tov((double)((long) a & (long) b));
+    case TOK_OR:      return tov((double)((long) a | (long) b));
+    case TOK_UMINUS:  return tov(-b);
+    case TOK_UPLUS:   return r;
+    case TOK_TILDA:   return tov((double)(~(long) b));
+    case TOK_NOT:     return mkval(T_BOOL, b == 0);
+    case TOK_SHL:     return tov((double)((long) a << (long) b));
+    case TOK_SHR:     return tov((double)((long) a >> (long) b));
+    case TOK_DOT:     return do_dot_op(js, l, r);
+    case TOK_EQ:      return mkval(T_BOOL, (long) a == (long) b);
+    case TOK_NE:      return mkval(T_BOOL, (long) a != (long) b);
+    case TOK_LT:      return mkval(T_BOOL, a < b);
+    case TOK_LE:      return mkval(T_BOOL, a <= b);
+    case TOK_GT:      return mkval(T_BOOL, a > b);
+    case TOK_GE:      return mkval(T_BOOL, a >= b);
+    default:          return js_mkerr(js, "unknown op %d", (int) op);  // LCOV_EXCL_LINE
+  }
+}
+
 static jsval_t do_op(struct js *js, uint8_t op, jsval_t lhs, jsval_t rhs) {
   if (js->flags & F_NOEXEC) return 0;
+  setlwm(js);
+  if (js->maxcss > 0 && js->css > js->maxcss) return js_mkerr(js, "C stack");
+  
   jsval_t l = resolveprop(js, lhs), r = resolveprop(js, rhs);
   // printf("OP %d %d %d\n", op, vtype(lhs), vtype(r));
   setlwm(js);
@@ -806,31 +858,7 @@ static jsval_t do_op(struct js *js, uint8_t op, jsval_t lhs, jsval_t rhs) {
   if (is_unary(op) && vtype(r) != T_NUM) return js_mkerr(js, "type mismatch");
   if (!is_unary(op) && op != TOK_DOT && (vtype(l) != T_NUM || vtype(r) != T_NUM)) return js_mkerr(js, "type mismatch");
   double a = tod(l), b = tod(r);
-  switch (op) {
-    //case TOK_EXP:     return tov(pow(a, b));
-    case TOK_DIV:     return tod(r) == 0 ? js_mkerr(js, "div by zero") : tov(a / b);
-    case TOK_REM:     return tov(a - b * ((double) (long) (a / b)));
-    case TOK_MUL:     return tov(a * b);
-    case TOK_PLUS:    return tov(a + b);
-    case TOK_MINUS:   return tov(a - b);
-    case TOK_XOR:     return tov((double)((long) a ^ (long) b));
-    case TOK_AND:     return tov((double)((long) a & (long) b));
-    case TOK_OR:      return tov((double)((long) a | (long) b));
-    case TOK_UMINUS:  return tov(-b);
-    case TOK_UPLUS:   return r;
-    case TOK_TILDA:   return tov((double)(~(long) b));
-    case TOK_NOT:     return mkval(T_BOOL, b == 0);
-    case TOK_SHL:     return tov((double)((long) a << (long) b));
-    case TOK_SHR:     return tov((double)((long) a >> (long) b));
-    case TOK_DOT:     return do_dot_op(js, l, r);
-    case TOK_EQ:      return mkval(T_BOOL, (long) a == (long) b);
-    case TOK_NE:      return mkval(T_BOOL, (long) a != (long) b);
-    case TOK_LT:      return mkval(T_BOOL, a < b);
-    case TOK_LE:      return mkval(T_BOOL, a <= b);
-    case TOK_GT:      return mkval(T_BOOL, a > b);
-    case TOK_GE:      return mkval(T_BOOL, a >= b);
-    default:          return js_mkerr(js, "unknown op %d", (int) op);  // LCOV_EXCL_LINE
-  }
+  return ubsan_op(js, op, a, b, l, r);
 }  // clang-format on
 
 static jsval_t js_str_literal(struct js *js) {
@@ -1011,6 +1039,8 @@ static jsval_t js_postfix(struct js *js) {
 }
 
 static jsval_t js_unary(struct js *js) {
+  setlwm(js);
+  if (js->maxcss > 0 && js->css > js->maxcss) return js_mkerr(js, "C stack");
   if (next(js) == TOK_NOT || js->tok == TOK_TILDA || js->tok == TOK_TYPEOF ||
       js->tok == TOK_MINUS || js->tok == TOK_PLUS) {
     uint8_t t = js->tok;
@@ -1059,6 +1089,8 @@ static jsval_t js_bitwise_or(struct js *js) {
 }
 
 static jsval_t js_logical_and(struct js *js) {
+  setlwm(js);
+  if (js->maxcss > 0 && js->css > js->maxcss) return js_mkerr(js, "C stack");
   jsval_t res = js_bitwise_or(js);
   if (is_err(res)) return res;
   uint8_t flags = js->flags;
@@ -1077,6 +1109,8 @@ static jsval_t js_logical_and(struct js *js) {
 }
 
 static jsval_t js_logical_or(struct js *js) {
+  setlwm(js);
+  if (js->maxcss > 0 && js->css > js->maxcss) return js_mkerr(js, "C stack");
   jsval_t res = js_logical_and(js);
   if (is_err(res)) return res;
   uint8_t flags = js->flags;
@@ -1095,6 +1129,8 @@ static jsval_t js_logical_or(struct js *js) {
 }
 
 static jsval_t js_ternary(struct js *js) {
+  setlwm(js);
+  if (js->maxcss > 0 && js->css > js->maxcss) return js_mkerr(js, "C stack");
   jsval_t res = js_logical_or(js);
   if (next(js) == TOK_Q) {
     uint8_t flags = js->flags;
@@ -1117,6 +1153,8 @@ static jsval_t js_ternary(struct js *js) {
 }
 
 static jsval_t js_assignment(struct js *js) {
+  setlwm(js);
+  if (js->maxcss > 0 && js->css > js->maxcss) return js_mkerr(js, "C stack");
   RTL_BINOP(js_ternary, js_assignment,
             (next(js) == TOK_ASSIGN || js->tok == TOK_PLUS_ASSIGN ||
              js->tok == TOK_MINUS_ASSIGN || js->tok == TOK_MUL_ASSIGN ||
@@ -1127,6 +1165,8 @@ static jsval_t js_assignment(struct js *js) {
 }
 
 static jsval_t js_expr(struct js *js) {
+  setlwm(js);
+  if (js->maxcss > 0 && js->css > js->maxcss) return js_mkerr(js, "C stack");
   return js_assignment(js);
 }
 
@@ -1296,6 +1336,8 @@ static jsval_t js_return(struct js *js) {
 }
 
 static jsval_t js_stmt(struct js *js) {
+  setlwm(js);
+  if (js->maxcss > 0 && js->css > js->maxcss) return js_mkerr(js, "C stack");
   jsval_t res;
   // jsoff_t pos = js->pos - js->tlen;
   if (js->brk > js->gct) js_gc(js);
