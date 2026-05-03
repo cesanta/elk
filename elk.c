@@ -336,9 +336,11 @@ static jsval_t setprop(struct js *js, jsval_t obj, jsval_t k, jsval_t v) {
   memcpy(buf, &koff, sizeof(koff));           // Initialize prop data: copy key
   memcpy(buf + sizeof(koff), &v, sizeof(v));  // Copy value
   jsoff_t brk = js->brk | T_OBJ;              // New prop offset
-  memcpy(&js->mem[head], &brk, sizeof(brk));  // Repoint head to the new prop
   // printf("PROP: %u -> %u\n", b, brk);
-  return mkentity(js, (b & ~3U) | T_PROP, buf, sizeof(buf));  // Create new prop
+  jsval_t res = mkentity(js, (b & ~3U) | T_PROP, buf, sizeof(buf));
+  if (!is_err(res))
+    memcpy(&js->mem[head], &brk, sizeof(brk));  // Repoint head to the new prop
+  return res;
 }
 
 // Return T_OBJ/T_PROP/T_STR entity size based on the first word in memory
