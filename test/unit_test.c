@@ -543,6 +543,12 @@ static void test_c_funcs(void) {
   assert(ev(js, "gt(0.78,-12.5)", "true"));
   // assert(ev(js, "gt(2,2)", "true"));
 
+  // A runtime error returned from a C function should be preserved even when
+  // it appears as part of a larger expression (the trailing operator/operand
+  // must not be misreported as "; expected").
+  assert(ev(js, "gt() * 2", "ERROR: doh"));
+  assert(ev(js, "1 + gt(null, 1)", "ERROR: doh"));
+
   js_set(js, js_glob(js), "set_timer", js_mkfun(js_set_timer));
   js_eval(js, "let v = 0, f = function(x) { v+=x; };", ~0UL);
   js_eval(js, "set_timer('f');", ~0UL);

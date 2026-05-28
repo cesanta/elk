@@ -1317,6 +1317,7 @@ static jsval_t js_stmt(struct js *js) {
     default:            res = resolveprop(js, js_expr(js)); break;
   }
   //printf("STMT [%.*s] -> %s, tok %d, flags %d\n", (int) (js->pos - pos), &js->code[pos], js_str(js, res), next(js), js->flags);
+  if (is_err(res)) return res;  // Preserve the original runtime error; do not clobber it with a "; expected" parse error below.
   if (next(js) != TOK_SEMICOLON && next(js) != TOK_EOF && next(js) != TOK_RBRACE) return js_mkerr(js, "; expected");
   js->consumed = 1;
   // clang-format on
