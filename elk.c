@@ -778,6 +778,59 @@ static jsval_t do_call_op(struct js *js, jsval_t func, jsval_t args) {
   return res;
 }
 
+// ECMAScript specifies ToInt32/ToUint32 for the bitwise and shift operators, plus a
+// shift count masked to five bits. Casting a double to long instead is undefined.
+static int32_t i32_wrap(uint32_t u) {  // fold [0,2^32) into int32_t
+  return u <= 0x7fffffffU ? (int32_t) u : -(int32_t) (0xffffffffU - u) - 1;
+}
+
+// Truncate toward zero without libm, which elk does not link. At 2^53 or more a
+// double is already an integer; below that it fits int64_t, so the cast is in range.
+static double jstrunc(double x) {
+  uint64_t bits;
+  double t;
+  if (!isfinite(x)) return x;
+  if (x >= 9007199254740992.0 || x <= -9007199254740992.0) return x;
+  t = (double) (int64_t) x;
+  if (t == 0.0) {                      // the cast loses the sign of a zero
+    memcpy(&bits, &x, sizeof(bits));
+    bits &= 0x8000000000000000ULL;
+    memcpy(&t, &bits, sizeof(t));
+  }
+  return t;
+}
+
+// ECMAScript ToUint32, read out of the representation: d is m * 2^e with m a 53-bit
+// integer, so the modulo is a shift and a mask.
+static uint32_t to_uint32(double d) {
+  uint64_t bits, m;
+  int sign, e;
+  uint32_t r;
+  if (!isfinite(d)) return 0;          // covers nan, +inf and -inf
+  memcpy(&bits, &d, sizeof(bits));
+  sign = (int) (bits >> 63);
+  e = (int) ((bits >> 52) & 0x7ff);
+  m = bits & 0xfffffffffffffULL;
+  if (e == 0) return 0;                // zero or subnormal, so |d| < 1
+  m |= 1ULL << 52;                     // the implicit leading bit
+  e -= 1075;                           // d == m * 2^e exactly from here
+  if (e >= 32) {
+    r = 0;                             // d is a multiple of 2^32
+  } else if (e >= 0) {
+    r = (uint32_t) ((m & ((1ULL << (32 - e)) - 1)) << e);
+  } else if (e > -53) {
+    r = (uint32_t) ((m >> -e) & 0xffffffffULL);   // truncates toward zero
+  } else {
+    r = 0;                             // |d| < 1
+  }
+  if (sign) r = (uint32_t) (0u - r);   // ToUint32 of a negative is 2^32 - |n|
+  return r;
+}
+static int32_t to_int32(double d) { return i32_wrap(to_uint32(d)); }
+
+// A positive NaN decodes as T_CODEREF rather than a number, so TOK_REM refuses the
+// operands that would produce one, as TOK_DIV already refuses a zero divisor.
+
 // clang-format off
 static jsval_t do_op(struct js *js, uint8_t op, jsval_t lhs, jsval_t rhs) {
   if (js->flags & F_NOEXEC) return 0;
@@ -809,22 +862,22 @@ static jsval_t do_op(struct js *js, uint8_t op, jsval_t lhs, jsval_t rhs) {
   switch (op) {
     //case TOK_EXP:     return tov(pow(a, b));
     case TOK_DIV:     return tod(r) == 0 ? js_mkerr(js, "div by zero") : tov(a / b);
-    case TOK_REM:     return tov(a - b * ((double) (long) (a / b)));
+    case TOK_REM:     return (b == 0 || !isfinite(a)) ? js_mkerr(js, "bad %% operands") : tov(a - b * jstrunc(a / b));
     case TOK_MUL:     return tov(a * b);
     case TOK_PLUS:    return tov(a + b);
     case TOK_MINUS:   return tov(a - b);
-    case TOK_XOR:     return tov((double)((long) a ^ (long) b));
-    case TOK_AND:     return tov((double)((long) a & (long) b));
-    case TOK_OR:      return tov((double)((long) a | (long) b));
+    case TOK_XOR:     return tov((double)(to_int32(a) ^ to_int32(b)));
+    case TOK_AND:     return tov((double)(to_int32(a) & to_int32(b)));
+    case TOK_OR:      return tov((double)(to_int32(a) | to_int32(b)));
     case TOK_UMINUS:  return tov(-b);
     case TOK_UPLUS:   return r;
-    case TOK_TILDA:   return tov((double)(~(long) b));
+    case TOK_TILDA:   return tov((double)(~to_int32(b)));
     case TOK_NOT:     return mkval(T_BOOL, b == 0);
-    case TOK_SHL:     return tov((double)((long) a << (long) b));
-    case TOK_SHR:     return tov((double)((long) a >> (long) b));
+    case TOK_SHL:     return tov((double) i32_wrap((uint32_t)((uint64_t) to_uint32(a) << (to_uint32(b) & 31))));
+    case TOK_SHR:     return tov((double)(to_int32(a) >> (to_uint32(b) & 31)));
     case TOK_DOT:     return do_dot_op(js, l, r);
-    case TOK_EQ:      return mkval(T_BOOL, (long) a == (long) b);
-    case TOK_NE:      return mkval(T_BOOL, (long) a != (long) b);
+    case TOK_EQ:      return mkval(T_BOOL, a == b);
+    case TOK_NE:      return mkval(T_BOOL, a != b);
     case TOK_LT:      return mkval(T_BOOL, a < b);
     case TOK_LE:      return mkval(T_BOOL, a <= b);
     case TOK_GT:      return mkval(T_BOOL, a > b);
